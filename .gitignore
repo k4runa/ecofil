@@ -1,0 +1,4 @@
+*.db
+*__pycahce__
+*.pt 
+*.pth
