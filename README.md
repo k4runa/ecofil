@@ -21,7 +21,6 @@ The entire application (Frontend + Backend) is seamlessly unified into a single 
   - **Interaction Requests:** A privacy-first layer where new conversations require recipient approval.
   - **Similar Minds:** An advanced discovery algorithm that matches users based on cinematic taste percentages.
   - **Rich User Profiles:** Public profiles showcasing users' favorite movies, genres, and real-time activity status.
-  - **Live Presence:** Integrated online/offline indicators and precise 'Last Seen' tracking.
 - **Glassmorphism UI:** A premium, state-of-the-art dashboard built with Next.js, Framer Motion, and Tailwind CSS.
 - **Robust Database Management:** Powered by PostgreSQL and SQLAlchemy 2.0 (Async), with schema versioning strictly managed by **Alembic**.
 - **Multi-Stage Docker Pipeline:** A highly optimized Docker build that securely compiles the Node.js frontend and packages it into a lightweight Python container.
