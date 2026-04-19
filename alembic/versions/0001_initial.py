@@ -2,7 +2,7 @@
 
 Revision ID: 0001_initial
 Revises: 
-Create Date: 2026-04-19 20:20:00.000000
+Create Date: 2026-04-19 21:00:00.000000
 
 """
 from typing import Sequence, Union
@@ -21,9 +21,20 @@ def upgrade() -> None:
         'users',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('username', sa.String(), nullable=False),
+        sa.Column('nickname', sa.String(), nullable=True),
         sa.Column('role', sa.String(), server_default='user', nullable=False),
         sa.Column('password', sa.String(), nullable=False),
         sa.Column('email', sa.String(), nullable=False),
+        sa.Column('avatar_url', sa.String(), nullable=True),
+        sa.Column('bio', sa.String(), nullable=True),
+        sa.Column('gender', sa.String(), nullable=True),
+        sa.Column('age', sa.Integer(), nullable=True),
+        sa.Column('location', sa.String(), nullable=True),
+        sa.Column('show_age', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('show_gender', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('show_location', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('show_bio', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('show_favorites', sa.Boolean(), server_default='true', nullable=False),
         sa.Column('device', sa.String(), nullable=True),
         sa.Column('device_name', sa.String(), nullable=True),
         sa.Column('machine', sa.String(), nullable=True),
@@ -35,6 +46,8 @@ def upgrade() -> None:
         sa.Column('ip', sa.String(), nullable=True),
         sa.Column('ai_enabled', sa.Boolean(), server_default='true', nullable=False),
         sa.Column('max_toasts', sa.Integer(), server_default='5', nullable=False),
+        sa.Column('dm_notifications', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('muted_users', sa.String(), nullable=True),
         sa.Column('is_deleted', sa.Boolean(), server_default='false', nullable=False),
         sa.Column('is_private', sa.Boolean(), server_default='false', nullable=False),
         sa.Column('created_at', sa.String(), nullable=False),
@@ -65,7 +78,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_movies_tmdb_id'), 'movies', ['tmdb_id'], unique=False)
     op.create_index(op.f('ix_movies_user_id'), 'movies', ['user_id'], unique=False)
 
-    # 3. WatchedMovies Table
+    # 3. Watched Movies Table
     op.create_table(
         'watched_movies',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -90,6 +103,12 @@ def upgrade() -> None:
         sa.Column('receiver_id', sa.Integer(), nullable=False),
         sa.Column('content', sa.String(), nullable=False),
         sa.Column('is_read', sa.Boolean(), server_default='false', nullable=False),
+        sa.Column('message_type', sa.String(), server_default='text', nullable=False),
+        sa.Column('attachment_url', sa.String(), nullable=True),
+        sa.Column('deleted_by_sender', sa.Boolean(), server_default='false', nullable=False),
+        sa.Column('deleted_by_receiver', sa.Boolean(), server_default='false', nullable=False),
+        sa.Column('is_edited', sa.Boolean(), server_default='false', nullable=False),
+        sa.Column('edited_at', sa.String(), nullable=True),
         sa.Column('created_at', sa.String(), nullable=False),
         sa.ForeignKeyConstraint(['receiver_id'], ['users.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['sender_id'], ['users.id'], ondelete='CASCADE'),
@@ -98,15 +117,32 @@ def upgrade() -> None:
     op.create_index(op.f('ix_messages_receiver_id'), 'messages', ['receiver_id'], unique=False)
     op.create_index(op.f('ix_messages_sender_id'), 'messages', ['sender_id'], unique=False)
 
-    # 5. SimilarityMatches Table
+    # 5. Conversations Table
+    op.create_table(
+        'conversations',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('user1_id', sa.Integer(), nullable=False),
+        sa.Column('user2_id', sa.Integer(), nullable=False),
+        sa.Column('status', sa.String(), server_default='PENDING', nullable=False),
+        sa.Column('created_at', sa.String(), nullable=False),
+        sa.Column('updated_at', sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(['user1_id'], ['users.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['user2_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('user1_id', 'user2_id', name='uq_user_pair')
+    )
+    op.create_index(op.f('ix_conversations_user1_id'), 'conversations', ['user1_id'], unique=False)
+    op.create_index(op.f('ix_conversations_user2_id'), 'conversations', ['user2_id'], unique=False)
+
+    # 6. Similarity Matches Table
     op.create_table(
         'similarity_matches',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('target_id', sa.Integer(), nullable=False),
         sa.Column('score', sa.Float(), nullable=False),
-        sa.Column('reasons', sa.String(), nullable=False),
-        sa.Column('last_updated', sa.String(), nullable=False),
+        sa.Column('reasons', sa.String(), nullable=True),
+        sa.Column('updated_at', sa.String(), nullable=False),
         sa.ForeignKeyConstraint(['target_id'], ['users.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
@@ -117,6 +153,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table('similarity_matches')
+    op.drop_table('conversations')
     op.drop_table('messages')
     op.drop_table('watched_movies')
     op.drop_table('movies')
