@@ -6,11 +6,8 @@ set -e
 
 echo "🚀 Starting CineWave Production Environment..."
 
-# 1. Sync database migrations
-# We wipe the entire DB to ensure a clean start if there was a version mismatch.
-echo "🧨 WIPING AND RESETTING DATABASE (Clean Start)..."
-python scripts/reset_alembic.py
-echo "Synchronizing database migrations..."
+# 1. Update database tables to the latest version (Alembic)
+echo "Running database migrations..."
 alembic upgrade head
 
 # 2. Start the application with Gunicorn
