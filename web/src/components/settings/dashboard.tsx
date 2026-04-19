@@ -68,6 +68,7 @@ export function SettingsDashboard() {
         field: "ai_enabled",
         value: newValue
       });
+      await checkAuth(); // Sync the global store so the state persists across tab changes
       toast.success(newValue ? "AI Features Enabled" : "AI Features Disabled");
     } catch (err: any) {
       setAiEnabled(!newValue); // revert
@@ -94,15 +95,15 @@ export function SettingsDashboard() {
           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Profile Management</label>
         </div>
         
-        <div className="flex flex-col gap-4 p-6 bg-[#171717] rounded-xl border border-[#262626] shadow-sm group transition-all">
+        <div className="flex flex-col gap-4 p-6 bg-card rounded-xl border border-border shadow-sm group transition-all">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="font-bold text-xl tracking-tight text-white">{user?.username}</p>
+              <p className="font-bold text-xl tracking-tight text-foreground">{user?.username}</p>
               <p className="text-xs text-muted-foreground font-medium mt-0.5">Public Account Identity</p>
             </div>
             <Button 
               variant="outline" 
-              className={`rounded-lg px-4 font-bold text-[10px] uppercase tracking-widest transition-all h-8 border-[#262626] hover:bg-[#262626] text-white`}
+              className={`rounded-lg px-4 font-bold text-[10px] uppercase tracking-widest transition-all h-8 border-border hover:bg-accent text-foreground`}
               onClick={() => setIsEditingUsername(!isEditingUsername)}
             >
               {isEditingUsername ? "Cancel" : "Manage"}
@@ -113,7 +114,7 @@ export function SettingsDashboard() {
             <motion.div 
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              className="pt-6 border-t border-[#262626] space-y-4"
+              className="pt-6 border-t border-border space-y-4"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -122,7 +123,7 @@ export function SettingsDashboard() {
                     type="text" 
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value)}
-                    className="w-full h-10 bg-[#262626] border border-transparent rounded-lg px-3 text-xs text-white placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-white/20 transition-all font-medium"
+                    className="w-full h-10 bg-accent border border-transparent rounded-lg px-3 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all font-medium"
                     placeholder="Enter new username"
                   />
                 </div>
@@ -132,7 +133,7 @@ export function SettingsDashboard() {
                     type="password" 
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full h-10 bg-[#262626] border border-transparent rounded-lg px-3 text-xs text-white placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-white/20 transition-all font-medium"
+                    className="w-full h-10 bg-accent border border-transparent rounded-lg px-3 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all font-medium"
                     placeholder="••••••••"
                   />
                 </div>
@@ -140,7 +141,7 @@ export function SettingsDashboard() {
               <Button 
                 onClick={handleUpdateUsername} 
                 disabled={isSubmitting || !newUsername || !currentPassword}
-                className="w-full bg-white text-[#0a0a0a] hover:bg-white/90 rounded-lg h-10 font-black text-[10px] uppercase tracking-widest transition-all"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-10 font-black text-[10px] uppercase tracking-widest transition-all"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Commit Changes"}
               </Button>
@@ -155,19 +156,19 @@ export function SettingsDashboard() {
           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">App Preferences</label>
         </div>
 
-        <div className="w-full rounded-xl border border-[#262626] bg-[#171717] p-6 shadow-sm space-y-6">
+        <div className="w-full rounded-xl border border-border bg-card p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-lg font-bold tracking-tight text-white">Interface & Features</h3>
+            <h3 className="text-lg font-bold tracking-tight text-foreground">Interface & Features</h3>
             <p className="text-muted-foreground text-xs font-medium mt-0.5">Personalize your cinematic experience.</p>
           </div>
           
           <div className="space-y-4">
             {/* Theme Toggle */}
-            <div className="flex items-center justify-between p-4 bg-[#262626]/50 rounded-lg border border-transparent hover:border-[#262626] transition-all group">
+            <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all group">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="theme-mode" className="text-sm font-bold cursor-pointer text-white">Theme Mode</Label>
-                  {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-white" /> : <Sun className="w-3.5 h-3.5 text-white" />}
+                  <Label htmlFor="theme-mode" className="text-sm font-bold cursor-pointer text-foreground">Theme Mode</Label>
+                  {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-foreground" /> : <Sun className="w-3.5 h-3.5 text-foreground" />}
                 </div>
                 <p className="text-[10px] text-muted-foreground font-medium">Switch between dark & light cinematic modes.</p>
               </div>
@@ -179,11 +180,11 @@ export function SettingsDashboard() {
             </div>
 
             {/* AI Toggle */}
-            <div className="flex items-center justify-between p-4 bg-[#262626]/50 rounded-lg border border-transparent hover:border-[#262626] transition-all group">
+            <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all group">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="ai-toggle" className="text-sm font-bold cursor-pointer text-white">AI Eco Assistant</Label>
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                  <Label htmlFor="ai-toggle" className="text-sm font-bold cursor-pointer text-foreground">AI Eco Assistant</Label>
+                  <Sparkles className="w-3.5 h-3.5 text-foreground" />
                 </div>
                 <p className="text-[10px] text-muted-foreground font-medium">Enable deep cinematic analysis & chat memory.</p>
               </div>
@@ -195,11 +196,11 @@ export function SettingsDashboard() {
             </div>
 
             {/* Toast Limit */}
-            <div className="flex items-center justify-between p-4 bg-[#262626]/50 rounded-lg border border-transparent hover:border-[#262626] transition-all group">
+            <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all group">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="toast-limit" className="text-sm font-bold cursor-pointer text-white">Feedback Frequency</Label>
-                  <Bell className="w-3.5 h-3.5 text-white" />
+                  <Label htmlFor="toast-limit" className="text-sm font-bold cursor-pointer text-foreground">Feedback Frequency</Label>
+                  <Bell className="w-3.5 h-3.5 text-foreground" />
                 </div>
                 <p className="text-[10px] text-muted-foreground font-medium">Control the number of notification alerts.</p>
               </div>
@@ -208,7 +209,7 @@ export function SettingsDashboard() {
                   id="toast-limit"
                   value={toastLimit} 
                   onChange={handleToastLimitChange}
-                  className="bg-[#262626] border border-transparent rounded-lg px-3 py-1.5 text-white font-bold text-[9px] uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-white/20 transition-all appearance-none cursor-pointer pr-7"
+                  className="bg-accent border border-transparent rounded-lg px-3 py-1.5 text-foreground font-bold text-[9px] uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-ring transition-all appearance-none cursor-pointer pr-7"
                 >
                   <option value="1">1 Alert</option>
                   <option value="3">3 Max</option>
