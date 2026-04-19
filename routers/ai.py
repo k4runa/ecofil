@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from services.ai import ai_service
 from services.auth import get_current_user
 from services.database import logger
 from fastapi.responses import StreamingResponse
-from services.deps import movies_manager
+from services.deps import movies_manager, limiter
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -20,7 +20,8 @@ class ChatRequest(BaseModel):
 
 
 @router.post("/chat")
-async def chat_with_ai(request: ChatRequest, current_user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def chat_with_ai(request_obj: Request, request: ChatRequest, current_user: dict = Depends(get_current_user)):
     """
     General AI Chat endpoint with Streaming.
     """

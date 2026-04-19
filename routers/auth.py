@@ -7,11 +7,11 @@ Endpoints:
     POST /login  — Authenticate with username + password, receive a JWT.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from services.auth import verify_password, create_access_token, oauth2_scheme
 from services.database import UserNotFoundError
-from services.deps import users_manager
+from services.deps import users_manager, limiter
 import bcrypt
 from services.auth import blacklist_token, SECRET_KEY, ALGORITHM, oauth2_scheme
 import jwt
@@ -25,7 +25,8 @@ DUMMY_HASH = bcrypt.hashpw(b"dummy_password", bcrypt.gensalt()).decode("utf-8")
 
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("5/minute")
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Authenticate a user and return a JWT access token.
 

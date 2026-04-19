@@ -71,7 +71,7 @@ class AIService:
             for attempt in range(3):
                 try:
                     client              =   genai.Client(api_key=key)
-                    response            =   await client.aio.models.generate_content(model=self.gemini_model, contents=prompt)
+                    response            =   await asyncio.wait_for(client.aio.models.generate_content(model=self.gemini_model, contents=prompt), timeout=15.0)
                     
                     if response and response.text:
                         return response.text.strip()
@@ -94,7 +94,7 @@ class AIService:
                     if "MODEL" in err_str or "NOT_FOUND" in err_str or "INVALID" in err_str:
                         logger.warning(f"Model {self.gemini_model} failed. Trying fallback {self.gemini_fallback_model}...")
                         try:
-                            response    =   await client.aio.models.generate_content(model=self.gemini_fallback_model, contents=prompt)
+                            response    =   await asyncio.wait_for(client.aio.models.generate_content(model=self.gemini_fallback_model, contents=prompt), timeout=15.0)
                             if response and response.text:
                                 return response.text.strip()
                         except Exception as fallback_e:
@@ -116,8 +116,8 @@ class AIService:
             delay                       =   1.0
             for attempt in range(3):
                 try:
-                    client              =   AsyncGroq(api_key=key)
-                    response            =   await client.chat.completions.create(model=self.groq_model,messages=[{"role": "user", "content": prompt}],max_tokens=max_tokens,)
+                    client              =   AsyncGroq(api_key=key, timeout=15.0)
+                    response            =   await asyncio.wait_for(client.chat.completions.create(model=self.groq_model,messages=[{"role": "user", "content": prompt}],max_tokens=max_tokens,), timeout=15.0)
                     if response and response.choices[0].message.content:
                         return response.choices[0].message.content.strip()
                 except Exception as e:
@@ -251,7 +251,8 @@ class AIService:
         try:
             client              =   genai.Client(api_key=key)
             # Use generate_content_stream for streaming
-            async for response in await client.aio.models.generate_content_stream(model=self.gemini_model, contents=prompt):
+            stream              =   await asyncio.wait_for(client.aio.models.generate_content_stream(model=self.gemini_model, contents=prompt), timeout=15.0)
+            async for response in stream:
                 if response.text:
                     yield response.text
         except Exception as e:
@@ -264,8 +265,8 @@ class AIService:
         """Helper to stream Groq with key rotation (simplified)."""
         key                     =   self.groq_keys[self.current_groq_idx]
         try:
-            client              =   AsyncGroq(api_key=key)
-            stream              =   await client.chat.completions.create(model=self.groq_model,messages=[{"role": "user", "content": prompt}],stream=True,)
+            client              =   AsyncGroq(api_key=key, timeout=15.0)
+            stream              =   await asyncio.wait_for(client.chat.completions.create(model=self.groq_model,messages=[{"role": "user", "content": prompt}],stream=True,), timeout=15.0)
             async for chunk in stream:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content

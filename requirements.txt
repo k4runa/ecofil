@@ -63,3 +63,4 @@ dnspython==2.8.0
 # --- AI & General Intelligence ---
 google-genai
 groq==0.18.0
+slowapi==0.1.9

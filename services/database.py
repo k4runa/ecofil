@@ -522,10 +522,12 @@ class UserManager:
             limit: Maximum number of rows to return (hard max: 100).
         """
         limit = min(limit, 100)  # Hard maximum to prevent unbounded queries
+        skip = max(skip, 0)
+        SENSITIVE_FIELDS = {"password", "ip", "hostname", "device_name", "machine", "memory"}
         stmt            =   select(User).offset(skip).limit(limit)
         result          =   await session.execute(stmt)
         users           =   result.scalars().all()
-        return [{c.name: getattr(u, c.name) for c in u.__table__.columns} for u in users]
+        return [{c.name: getattr(u, c.name) for c in u.__table__.columns if c.name not in SENSITIVE_FIELDS} for u in users]
 
     @transaction
     async def update_user_field(self, session: AsyncSession,username: str, field: str, value: Any, current_password: str | None = None) -> bool:
@@ -774,7 +776,8 @@ class MovieManager:
         
         return True
 
-    async def update_status(self, username: str, status: str, query: str) -> bool:
+    @transaction
+    async def update_status(self, session: AsyncSession, username: str, status: str, query: str) -> bool:
         """
         Mark a tracked movie with a new status (e.g. 'Watched').
 
@@ -788,50 +791,42 @@ class MovieManager:
         data                        =   await fetch_tmdb_data(query)
         if not data:
             raise MovieNotFoundError(query)
-        if self.session:
-            async with self.session() as session:
-                try:
-                    stmt            =   select(User).where(User.username == username)
-                    result          =   await session.execute(stmt)
-                    user            =   result.scalar_one_or_none()
-                    if not user:
-                        raise UserNotFoundError(username)
 
-                    movie_stmt      =   select(Movies).where(Movies.user_id == user.id, Movies.tmdb_id == data.get("tmdb_id"))
-                    movie_result    =   await session.execute(movie_stmt)
-                    movie           =   movie_result.scalar_one_or_none()
-                    if not movie:
-                        raise MovieNotFoundError(data.get("title", query))
+        stmt            =   select(User).where(User.username == username, User.is_deleted == False)
+        result          =   await session.execute(stmt)
+        user            =   result.scalar_one_or_none()
+        if not user:
+            raise UserNotFoundError(username)
 
-                    # Update status on the tracked movie
-                    movie.status    =   status
+        movie_stmt      =   select(Movies).where(Movies.user_id == user.id, Movies.tmdb_id == data.get("tmdb_id"))
+        movie_result    =   await session.execute(movie_stmt)
+        movie           =   movie_result.scalar_one_or_none()
+        if not movie:
+            raise MovieNotFoundError(data.get("title", query))
 
-                    if status == "Watched":
-                        # Check if already marked as watched
-                        already_watched_stmt        =   select(WatchedMovies).where(WatchedMovies.user_id == user.id,WatchedMovies.movie_id == movie.id,)
-                        already_watched_result      =   await session.execute(already_watched_stmt)
-                        
-                        if already_watched_result.scalar_one_or_none():
-                            raise MovieAlreadyExists(movie.title)
+        # Update status on the tracked movie
+        movie.status    =   status
 
-                        watched_entry               =   WatchedMovies(user_id=user.id,movie_id=movie.id,title=movie.title,status=status,watched_at=datetime.now(timezone.utc).isoformat(),)
-                        
-                        session.add(watched_entry)
-                    
-                    else:
-                        # If changed from Watched to something else, remove from WatchedMovies
-                        await session.execute(delete(WatchedMovies).where(WatchedMovies.user_id == user.id,WatchedMovies.movie_id == movie.id,))
-                    await session.commit()
-                    
-                    return True
-                
-                except Exception:
-                    await session.rollback()
-                    raise
+        if status == "Watched":
+            # Check if already marked as watched
+            already_watched_stmt        =   select(WatchedMovies).where(WatchedMovies.user_id == user.id,WatchedMovies.movie_id == movie.id,)
+            already_watched_result      =   await session.execute(already_watched_stmt)
+            
+            if already_watched_result.scalar_one_or_none():
+                raise MovieAlreadyExists(movie.title)
+
+            watched_entry               =   WatchedMovies(user_id=user.id,movie_id=movie.id,title=movie.title,status=status,watched_at=datetime.now(timezone.utc).isoformat(),)
+            
+            session.add(watched_entry)
         
-        return False
+        else:
+            # If changed from Watched to something else, remove from WatchedMovies
+            await session.execute(delete(WatchedMovies).where(WatchedMovies.user_id == user.id,WatchedMovies.movie_id == movie.id,))
         
-    async def add_movie(self, username: str, query: str, tmdb_id: int = 0) -> bool:
+        return True
+        
+    @transaction
+    async def add_movie(self, session: AsyncSession, username: str, query: str, tmdb_id: int = 0) -> bool:
         """
         Search TMDB for a movie and add it to the user's tracked list.
         Supports either a search query or a direct TMDB ID.
@@ -848,45 +843,31 @@ class MovieManager:
         if not data:
             raise MovieNotFoundError(query or str(tmdb_id))
 
-        if self.session:
-            async with self.session() as session:
-                try:
-                    stmt            =   select(User).where(User.username == username)
-                    result          =   await session.execute(stmt)
-                    user            =   result.scalar_one_or_none()
+        stmt            =   select(User).where(User.username == username, User.is_deleted == False)
+        result          =   await session.execute(stmt)
+        user            =   result.scalar_one_or_none()
 
-                    if not user:
-                        raise UserNotFoundError(username)
+        if not user:
+            raise UserNotFoundError(username)
 
-                    is_exist_stmt   =   select(Movies).where(Movies.user_id == user.id, Movies.tmdb_id == data.get("tmdb_id"))
-                    is_exist_result =   await session.execute(is_exist_stmt)
-                    is_exist        =   is_exist_result.scalar_one_or_none()
-                    
-                    if is_exist:
-                        raise MovieAlreadyExists(data.get("title"))  # type:ignore
-                    
-                    if user and user is not None:
-                        movie       =   Movies(
-                                            user_id         =   user.id,
-                                            tmdb_id         =   data.get("tmdb_id"),
-                                            title           =   data.get("title"),
-                                            overview        =   data.get("overview"),
-                                            genre_ids       =   data.get("genre_ids"),
-                                            status          =   "Not yet",
-                                            vote_average    =   data.get("vote_average"),
-                                            poster_url      =   data.get("poster_url"),
-                                            release_date    =   data.get("release_date"),
-                                        )
-
-                        session.add(movie)
-                        await session.commit()
-
-                        return True
-
-                    return False
-                
-                except Exception:
-                    await session.rollback()
-                    raise
+        is_exist_stmt   =   select(Movies).where(Movies.user_id == user.id, Movies.tmdb_id == data.get("tmdb_id"))
+        is_exist_result =   await session.execute(is_exist_stmt)
+        is_exist        =   is_exist_result.scalar_one_or_none()
         
-        return False
+        if is_exist:
+            raise MovieAlreadyExists(data.get("title"))  # type:ignore
+        
+        movie       =   Movies(
+                            user_id         =   user.id,
+                            tmdb_id         =   data.get("tmdb_id"),
+                            title           =   data.get("title"),
+                            overview        =   data.get("overview"),
+                            genre_ids       =   data.get("genre_ids"),
+                            status          =   "Not yet",
+                            vote_average    =   data.get("vote_average"),
+                            poster_url      =   data.get("poster_url"),
+                            release_date    =   data.get("release_date"),
+                        )
+
+        session.add(movie)
+        return True

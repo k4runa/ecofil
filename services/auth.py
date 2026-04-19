@@ -122,8 +122,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         dict with key 'username' extracted from the token's 'sub' claim.
 
     Raises:
-        HTTPException 401: On missing, expired, or tampered tokens.
+        HTTPException 401: On missing, expired, tampered tokens, or deleted users.
     """
+    from services.deps import users_manager
+    from services.database import UserNotFoundError
+
     credentials_exception           =   HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Could not validate credentials",headers={"WWW-Authenticate": "Bearer"},)
 
     if not SECRET_KEY:
@@ -138,7 +141,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         payload                     =   jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"require": ["exp"]})
         username:str                =   payload.get("sub")  # type: ignore
         if username:
-            token_data              =   {"username": username}
+            try:
+                user_in_db = await users_manager.get_user_by_username(username)
+                if user_in_db.get("is_deleted"):
+                    logger.warning(f"Attempted access by deleted user: {username}")
+                    raise credentials_exception
+            except UserNotFoundError:
+                logger.warning(f"Attempted access by non-existent user: {username}")
+                raise credentials_exception
+
+            token_data              =   {"username": username, "role": user_in_db.get("role", "user")}
             return token_data
         raise credentials_exception
     except jwt.ExpiredSignatureError:

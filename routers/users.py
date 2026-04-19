@@ -19,9 +19,26 @@ from pydantic import BaseModel
 from services.database import logger
 from services.deps import users_manager
 from services.schemas import UserScheme, APIResponseUser, APIResponseUsersList
-from services.auth import get_current_user, create_access_token
+from services.auth import get_current_user, create_access_token, oauth2_scheme, blacklist_token, SECRET_KEY, ALGORITHM
+import jwt
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+async def _revoke_token(token: str):
+    """Helper to blacklist a token until it naturally expires."""
+    try:
+        if not SECRET_KEY:
+            return
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"require": ["exp"]})
+        exp = payload.get("exp")
+        if exp:
+            now = datetime.now(timezone.utc).timestamp()
+            ttl = int(exp - now)
+            if ttl > 0:
+                await blacklist_token(token, expires_in_seconds=ttl)
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +126,7 @@ async def get_user_by_username(username: str, current_user: dict = Depends(get_c
 
 
 @router.delete("/{username}")
-async def delete_user(username: str, current_user: dict = Depends(get_current_user)):
+async def delete_user(username: str, current_user: dict = Depends(get_current_user), token: str = Depends(oauth2_scheme)):
     """
     Soft-delete the authenticated user's account.
 
@@ -119,11 +136,13 @@ async def delete_user(username: str, current_user: dict = Depends(get_current_us
     if current_user.get("username") != username:
         raise HTTPException(status_code=403, detail="Not authorized to access this resource")
     success         =   await users_manager.delete_user(username)  # type: ignore
+    if success:
+        await _revoke_token(token)
     return {"success": success}
 
 
 @router.patch("/{username}")
-async def update_user_field(username: str, v: UpdateUserRequest, current_user: dict = Depends(get_current_user)):
+async def update_user_field(username: str, v: UpdateUserRequest, current_user: dict = Depends(get_current_user), token: str = Depends(oauth2_scheme)):
     """
     Update a single field on the authenticated user's profile.
 
@@ -136,11 +155,16 @@ async def update_user_field(username: str, v: UpdateUserRequest, current_user: d
         
         response    =   {"success": str(success)}
         
-        # If username changed, we must issue a new token
+        # If username changed, we must issue a new token and revoke the old one
         if v.field.lower() == "username" and success:
+            await _revoke_token(token)
             new_token                   =   create_access_token(data={"sub": v.value})
             response["new_token"]       =   new_token
             response["new_username"]    =   v.value
+
+        # If password changed, revoke the old token (requires client to log in again)
+        elif v.field.lower() == "password" and success:
+            await _revoke_token(token)
             
         return response
     except ValueError as e:

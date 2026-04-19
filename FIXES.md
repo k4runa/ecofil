@@ -102,3 +102,21 @@ git filter-repo --invert-paths --path .env --force
 # 3. Force push to all remotes
 git push --force --all
 ```
+
+---
+
+## 🔒 Phase 2 Security Hardening (2026-04-19)
+
+### 15. Broken Token Lifecycle Fixed
+**Files:** `services/auth.py`, `routers/users.py`
+Previously, `get_current_user` only verified cryptographic validity without checking the database. A user could delete their account but continue using their active JWT. The system now enforces `is_deleted == False` on every request. Furthermore, deleting an account or changing credentials now explicitly blacklists the active token to prevent reuse.
+
+### 16. Rate Limiting Enforced (SlowAPI)
+**Files:** `main.py`, `routers/auth.py`, `routers/ai.py`, `requirements.txt`
+The API was vulnerable to brute-force credential stuffing and AI cost abuse. Implemented `slowapi`:
+- `POST /login`: Limited to 5 requests per minute per IP.
+- `POST /ai/chat`: Limited to 10 requests per minute per IP.
+
+### 17. Strict AI Timeouts
+**File:** `services/ai.py`
+External AI SDKs (`genai.Client`, `AsyncGroq`) were allowed to hang indefinitely on network failure, which could lock up FastAPI workers. Wrapped all synchronous and streaming AI calls in `asyncio.wait_for(..., timeout=15.0)` to guarantee worker release.

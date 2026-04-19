@@ -17,6 +17,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from services.database import (
     logger,
     UserAlreadyExists,
@@ -79,6 +83,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # Enable documentation only in DEBUG mode (Security hardening)
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
+from services.deps import limiter
+
 app = FastAPI(
     title="CineWave API",
     description="A production-ready, AI-powered movie recommendation system with advanced security hardening.",
@@ -97,12 +103,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SlowAPIMiddleware)
 
-# ---------------------------------------------------------------------------
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Router Registration
 # Each router is defined in its own module under `routers/` for separation
 # of concerns.  Prefixes and tags are set inside each router file.
