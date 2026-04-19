@@ -51,14 +51,15 @@ oauth2_scheme                   =   OAuth2PasswordBearer(tokenUrl = "login")
 # ---------------------------------------------------------------------------
 async def verify_google_token(token: str) -> dict | None:
     """
-    Verifies a Google ID token and returns the user info if valid.
+    Verifies a Google token. It first tries to verify it as an ID Token,
+    and if that fails, it tries to fetch user info via Access Token.
     """
     if not GOOGLE_CLIENT_ID:
         logger.error("GOOGLE_CLIENT_ID not found in environment variables.")
         return None
     
+    # 1. Try as ID Token (Standard)
     try:
-        # id_token.verify_oauth2_token is a blocking call, run it in threadpool
         idinfo = await run_in_threadpool(
             id_token.verify_oauth2_token,
             token,
@@ -66,9 +67,18 @@ async def verify_google_token(token: str) -> dict | None:
             GOOGLE_CLIENT_ID
         )
         return idinfo
-    except Exception as e:
-        logger.error(f"Google token verification failed: {e}")
-        return None
+    except Exception:
+        # 2. Try as Access Token (if it's not an ID Token)
+        import httpx
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}")
+                if resp.status_code == 200:
+                    return resp.json()
+        except Exception as e:
+            logger.error(f"Google access token verification failed: {e}")
+    
+    return None
 
 # ---------------------------------------------------------------------------
 # Token Blacklisting

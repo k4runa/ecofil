@@ -64,3 +64,4 @@ dnspython==2.8.0
 google-genai
 groq==0.18.0
 slowapi==0.1.9
+google-auth==2.38.0
