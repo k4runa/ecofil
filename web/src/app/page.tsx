@@ -23,6 +23,8 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api";
 import { SettingsDashboard } from "@/components/settings/dashboard";
+import { Header } from "@/components/ui/header-2";
+import { CollapsibleSidebar } from "@/components/ui/collapsible-sidebar";
 
 export default function Home() {
   const { isAuthenticated, user, isLoading, checkAuth, logout } =
@@ -32,10 +34,26 @@ export default function Home() {
     "movies" | "recommendations" | "settings"
   >("movies");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [chatPlaceholder, setChatPlaceholder] = useState("Ask Eco anything...");
+
+  const placeholders = [
+    "Ask Eco anything...",
+    "Whisper to the cinematic oracle...",
+    "Which movie should we explore today?",
+    "Tell me your favorite genre...",
+    "Searching for a hidden gem?",
+  ];
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (isChatOpen) {
+      const random = placeholders[Math.floor(Math.random() * placeholders.length)];
+      setChatPlaceholder(random);
+    }
+  }, [isChatOpen]);
 
   if (isLoading) {
     return (
@@ -55,7 +73,7 @@ export default function Home() {
             CINEWAVE
           </h1>
           <p className="text-muted-foreground font-medium tracking-wide">
-            Your AI Cinematic Oracle
+            Your AI Cinematic Expert
           </p>
         </div>
         <AuthForm />
@@ -78,102 +96,44 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar Navigation */}
-      <aside
-        className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-card/70 backdrop-blur-xl border-r border-border transition-transform duration-300 md:relative md:translate-x-0
-        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-      `}
-      >
-        <div className="flex flex-col h-full">
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-12">
-              <h1 className="text-3xl font-black tracking-tighter text-primary">
-                CINEWAVE
-              </h1>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="md:hidden p-2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      {/* Mobile Sidebar Navigation */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 left-0 z-[60] w-72 md:hidden"
+          >
+            <CollapsibleSidebar 
+              activeTab={activeTab} 
+              setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }}
+              logout={logout}
+              user={user}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            <div className="mb-8 md:hidden">
-              <MovieSearch />
-            </div>
-
-            <nav className="space-y-2">
-              {[
-                { id: "movies", label: "My Movies", icon: Film },
-                { id: "recommendations", label: "Discover", icon: Compass },
-                { id: "settings", label: "Settings", icon: Settings },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id as any);
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold ${activeTab === item.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]" : "text-muted-foreground hover:text-foreground hover:bg-accent/50"}`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-          <div className="mt-auto p-8 border-t border-border/50">
-            <button
-              onClick={logout}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all font-bold"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </aside>
+      {/* Desktop Collapsible Sidebar */}
+      <div className="hidden md:block">
+        <CollapsibleSidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab}
+          logout={logout}
+          user={user}
+        />
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent">
         {/* Top Header */}
-        <header className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-border/20 bg-background/40 backdrop-blur-md z-50 shrink-0">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-xl"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <UserIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div className="hidden sm:block">
-                <h2 className="text-sm font-black tracking-tight leading-none mb-1">
-                  Welcome, {user?.username}
-                </h2>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                  Enthusiast Member
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden md:flex flex-1 justify-center px-8">
-            <MovieSearch />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab("settings")}
-              className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-xl transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
+        <Header 
+          user={user} 
+          onOpenSidebar={() => setIsSidebarOpen(true)} 
+          onOpenSettings={() => setActiveTab("settings")} 
+        />
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-6 md:px-12 py-10 scroll-smooth relative">
@@ -208,7 +168,7 @@ export default function Home() {
                           Daily Picks
                         </h3>
                         <p className="text-muted-foreground font-medium">
-                          Curated by your personal AI Oracle.
+                          Curated by your personal Eco AI Assistant.
                         </p>
                       </div>
                       <RecommendationsDashboard />
@@ -242,12 +202,12 @@ export default function Home() {
             initial={{ scale: 0, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0, opacity: 0, y: 20 }}
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ y: -4, scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-8 right-8 z-40 w-16 h-16 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(var(--primary),0.3)] border border-primary/20 transition-all group"
+            className="fixed bottom-8 right-8 z-40 w-12 h-12 bg-[#171717] border border-[#262626] text-white rounded-xl flex items-center justify-center shadow-xl transition-all hover:shadow-white/5 hover:border-white/20 group"
           >
-            <Sparkles className="w-8 h-8 transition-transform" />
+            <Sparkles className="w-5 h-5 transition-transform" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -264,22 +224,22 @@ export default function Home() {
 
         <motion.div
           initial={false}
-          animate={{ x: isChatOpen ? 0 : "100%" }}
+          animate={{ x: isChatOpen ? 0 : "110%" }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed right-0 top-0 bottom-0 w-full sm:w-[450px] lg:w-[550px] bg-card/90 backdrop-blur-3xl border-l border-border shadow-2xl z-50 flex flex-col"
+          className="fixed right-6 top-6 bottom-6 w-full sm:w-[450px] lg:w-[500px] bg-[#171717] border border-[#262626] rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
           style={{ pointerEvents: isChatOpen ? "auto" : "none" }}
         >
-          <div className="flex items-center justify-between p-6 border-b border-border/50">
+          <div className="flex items-center justify-between p-5 border-b border-[#262626]">
             <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-2xl text-primary border border-primary/20 shadow-inner">
-                <Sparkles className="w-6 h-6" />
+              <div className="bg-[#262626] p-2.5 rounded-xl text-white border border-white/5 shadow-inner">
+                <Sparkles className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-black text-xl tracking-tight leading-none mb-1">
-                  Oracle Chat
+                  Eco AI Assistant
                 </h3>
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                  Conversational AI
+                  Cinematic Expert
                 </p>
               </div>
             </div>
@@ -293,7 +253,7 @@ export default function Home() {
 
           <div className="flex-1 overflow-hidden relative">
             <div className="absolute inset-0">
-              <VercelV0Chat />
+              <VercelV0Chat placeholder={chatPlaceholder} />
             </div>
           </div>
         </motion.div>

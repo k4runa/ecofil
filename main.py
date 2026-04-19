@@ -59,8 +59,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.themoviedb.org https://image.tmdb.org"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' https://image.tmdb.org https://images.placeholders.dev data:; "
+            "connect-src 'self' https://api.themoviedb.org; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "frame-ancestors 'none'"
+        )
         return response
 
 # ---------------------------------------------------------------------------
@@ -101,6 +111,12 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(movies.router)
 app.include_router(ai.router)
+
+
+@app.get("/health", tags=["system"])
+async def health_check():
+    """Lightweight health probe for Docker / load balancer health checks."""
+    return {"status": "healthy"}
 
 # ---------------------------------------------------------------------------
 # Static Frontend (SPA)

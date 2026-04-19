@@ -14,7 +14,7 @@ interface Message {
   content: string;
 }
 
-export function VercelV0Chat() {
+export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placeholder?: string }) {
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,22 +101,22 @@ export function VercelV0Chat() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-transparent overflow-hidden">
+    <div className="flex flex-col w-full h-full bg-[#0a0a0a] overflow-hidden">
       {/* Chat History */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide"
       >
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
-              <Sparkles className="w-10 h-10 text-primary" />
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
+            <div className="w-16 h-16 rounded-2xl bg-[#171717] flex items-center justify-center border border-[#262626] shadow-xl">
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-3xl font-black tracking-tighter text-foreground">
-                CineWave Eco
+              <h2 className="text-2xl font-black tracking-tighter text-white">
+                Eco
               </h2>
-              <p className="text-muted-foreground font-medium max-w-[280px]">
+              <p className="text-muted-foreground text-xs font-medium max-w-[280px]">
                 Ask me anything about movies, directors, or personalized
                 recommendations.
               </p>
@@ -124,15 +124,15 @@ export function VercelV0Chat() {
             <div className="grid grid-cols-1 gap-2 w-full max-w-[300px]">
               <button
                 onClick={() => setValue("Recommend me an action movie")}
-                className="text-xs font-bold py-2 px-4 rounded-xl border border-border hover:bg-accent transition-all"
+                className="text-[10px] font-black uppercase tracking-widest py-3 px-4 rounded-xl border border-[#262626] bg-[#171717] text-muted-foreground hover:text-white hover:border-white/20 transition-all"
               >
-                "Recommend me an action movie"
+                "Recommend an action movie"
               </button>
               <button
                 onClick={() => setValue("What are my favorite movies?")}
-                className="text-xs font-bold py-2 px-4 rounded-xl border border-border hover:bg-accent transition-all"
+                className="text-[10px] font-black uppercase tracking-widest py-3 px-4 rounded-xl border border-[#262626] bg-[#171717] text-muted-foreground hover:text-white hover:border-white/20 transition-all"
               >
-                "What are my favorite movies?"
+                "What are my favorites?"
               </button>
             </div>
           </div>
@@ -142,7 +142,7 @@ export function VercelV0Chat() {
           {messages.map((msg, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               className={cn(
                 "flex w-full gap-3",
@@ -151,24 +151,24 @@ export function VercelV0Chat() {
             >
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full shrink-0 flex items-center justify-center border",
+                  "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center border",
                   msg.role === "user"
-                    ? "bg-primary/20 border-primary/30"
-                    : "bg-accent border-border",
+                    ? "bg-[#262626] border-white/10"
+                    : "bg-[#171717] border-[#262626]",
                 )}
               >
                 {msg.role === "user" ? (
-                  <User className="w-4 h-4 text-primary" />
+                  <User className="w-4 h-4 text-white" />
                 ) : (
-                  <Sparkles className="w-4 h-4 text-muted-foreground" />
+                  <Sparkles className="w-4 h-4 text-white" />
                 )}
               </div>
               <div
                 className={cn(
-                  "max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm",
+                  "max-w-[85%] p-4 rounded-xl text-xs leading-relaxed shadow-sm",
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground font-medium rounded-tr-none"
-                    : "bg-card border border-border/50 text-foreground rounded-tl-none prose prose-invert prose-sm max-w-none",
+                    ? "bg-white text-[#0a0a0a] font-bold rounded-tr-none"
+                    : "bg-[#171717] border border-[#262626] text-white rounded-tl-none prose prose-invert prose-sm max-w-none",
                 )}
               >
                 {msg.role === "assistant" ? (
@@ -188,12 +188,12 @@ export function VercelV0Chat() {
                         <li className="mb-1">{children}</li>
                       ),
                       code: ({ children }) => (
-                        <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+                        <code className="bg-[#262626] px-1 py-0.5 rounded text-[10px] font-mono">
                           {children}
                         </code>
                       ),
                       strong: ({ children }) => (
-                        <strong className="font-black text-primary/90">
+                        <strong className="font-black text-white">
                           {children}
                         </strong>
                       ),
@@ -211,23 +211,23 @@ export function VercelV0Chat() {
 
         {isLoading && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="flex justify-start gap-3"
           >
-            <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-accent border border-border">
-              <Sparkles className="w-4 h-4 text-muted-foreground" />
+            <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center bg-[#171717] border border-[#262626]">
+              <Sparkles className="w-4 h-4 text-white animate-pulse" />
             </div>
-            <div className="bg-card border border-border/50 p-4 rounded-2xl rounded-tl-none">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <div className="bg-[#171717] border border-[#262626] p-4 rounded-xl rounded-tl-none">
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
             </div>
           </motion.div>
         )}
       </div>
 
       {/* Input Area */}
-      <div className="p-6 bg-background/40 backdrop-blur-xl border-t border-border/30">
-        <div className="relative group bg-accent/30 rounded-3xl border border-border/50 shadow-inner transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40">
+      <div className="p-6 bg-[#0a0a0a] border-t border-[#262626]">
+        <div className="relative group bg-[#050505] rounded-2xl border border-[#262626] shadow-inner transition-all focus-within:border-white/10">
           <Textarea
             ref={textareaRef}
             value={value}
@@ -236,27 +236,27 @@ export function VercelV0Chat() {
               adjustHeight();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Whisper to Eco..."
-            className="w-full px-5 py-5 resize-none bg-transparent border-none text-foreground text-sm font-medium leading-relaxed focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground min-h-[60px] max-h-[200px] overflow-hidden"
+            placeholder={placeholder}
+            className="w-full px-5 py-5 resize-none bg-transparent border-none text-white text-xs font-medium leading-relaxed focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40 min-h-[60px] max-h-[200px] overflow-hidden"
           />
 
           <div className="flex items-center justify-between px-4 pb-4">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
-                Press Enter to send
+              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
+                Press Enter to whisper
               </span>
             </div>
             <button
               onClick={handleSend}
               disabled={!value.trim() || isLoading}
               className={cn(
-                "p-3 rounded-2xl transition-all duration-300 active:scale-95 shadow-lg",
+                "p-2.5 rounded-xl transition-all duration-300 active:scale-95",
                 value.trim() && !isLoading
-                  ? "bg-primary text-primary-foreground shadow-primary/20 scale-105"
-                  : "bg-accent text-muted-foreground opacity-50 cursor-not-allowed",
+                  ? "bg-white text-[#0a0a0a] scale-105 shadow-lg shadow-white/5"
+                  : "bg-[#171717] text-muted-foreground opacity-50 cursor-not-allowed",
               )}
             >
-              <ArrowUpIcon className="w-5 h-5" strokeWidth={3} />
+              <ArrowUpIcon className="w-4 h-4" strokeWidth={4} />
             </button>
           </div>
         </div>

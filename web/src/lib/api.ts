@@ -17,6 +17,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor — auto-logout on 401 (expired/invalid token)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+      // Trigger a storage event so Zustand stores can react
+      window.dispatchEvent(new Event('auth-expired'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const authApi = {
   login: (credentials: any) => api.post('/login', new URLSearchParams(credentials)),
   register: (userData: any) => api.post('/users', userData),

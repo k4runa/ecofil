@@ -54,3 +54,12 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# --- Testing & Linting ---
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# --- Audit (contains sensitive findings) ---
+AUDIT_REPORT.md

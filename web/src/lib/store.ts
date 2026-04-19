@@ -47,3 +47,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+
+// Auto-logout when the API interceptor detects a 401
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth-expired', () => {
+    useAuthStore.getState().logout();
+  });
+}

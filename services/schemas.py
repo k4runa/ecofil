@@ -31,13 +31,13 @@ class UserScheme(BaseModel):
     """
 
     username:       str         =   Field(..., min_length=4, max_length=50, pattern="^[a-zA-Z0-9_-]+$")
-    password:       str         =   Field(..., max_length=128)
+    password:       str         =   Field(..., min_length=8, max_length=128)
     email:          EmailStr
     # Optional hardware metadata from JS
-    device:         str | None  =   None
-    os:             str | None  =   None
-    machine:        str | None  =   None
-    memory:         str | None  =   None
+    device:         str | None  =   Field(None, max_length=100)
+    os:             str | None  =   Field(None, max_length=100)
+    machine:        str | None  =   Field(None, max_length=100)
+    memory:         str | None  =   Field(None, max_length=100)
 
     @field_validator("username")
     @classmethod
@@ -51,8 +51,8 @@ class UserScheme(BaseModel):
 
 
 class MovieScheme(BaseModel):
-    query:      str | None  = Field(None, max_length=100)
-    tmdb_id:    str | int   = 0
+    query:      str | None  = Field(None, max_length=200)
+    tmdb_id:    int         = Field(0, ge=0, le=999999999)
 
 
 # ---------------------------------------------------------------------------

@@ -30,13 +30,14 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 from typing import Any
+from pydantic import Field as PydanticField
 
 class UpdateUserRequest(BaseModel):
     """Payload for partial user updates — specify field name and new value."""
 
-    field: str
+    field: str = PydanticField(..., max_length=50)
     value: Any
-    current_password: str | None = None
+    current_password: str | None = PydanticField(None, max_length=128)
 
 
 # ---------------------------------------------------------------------------
