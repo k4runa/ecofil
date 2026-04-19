@@ -60,6 +60,26 @@ class MovieScheme(BaseModel):
     tmdb_id:    int         = Field(0, ge=0, le=999999999)
 
 
+class MessageCreate(BaseModel):
+    receiver_id:    int
+    content:        str         = Field(..., min_length=1, max_length=1000)
+
+class MessageUpdate(BaseModel):
+    content:        str         = Field(..., min_length=1, max_length=1000)
+
+
+class PrivacyUpdate(BaseModel):
+    is_private:     bool
+
+
+class ProfileUpdate(BaseModel):
+    nickname:   str | None = None
+    bio:        str | None = None
+    gender:     str | None = None
+    age:        int | None = None
+    location:   str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Response Models
 #
@@ -74,7 +94,18 @@ class UserResponse(BaseModel):
 
     id:         int
     username:   str
+    nickname:   str | None = None
     email:      str
+    avatar_url: str | None = None
+    bio:        str | None = None
+    gender:     str | None = None
+    age:        int | None = None
+    location:   str | None = None
+    show_age:   bool = True
+    show_gender: bool = True
+    show_location: bool = True
+    show_bio:    bool = True
+    show_favorites: bool = True
     device:     str | None = None
     os:         str | None = None
     country:    str | None = None
@@ -83,6 +114,19 @@ class UserResponse(BaseModel):
     last_seen:  str | None = None
     ai_enabled: bool
     max_toasts: int
+    dm_notifications: bool
+    muted_users: str | None = None
+    is_private: bool
+
+
+class UserMinimalResponse(BaseModel):
+    """Safe representation for discovery."""
+    id:         int
+    username:   str
+    nickname:   str | None = None
+    avatar_url: str | None = None
+    bio:        str | None = None
+    last_seen:  str | None = None
 
 
 class MovieResponse(BaseModel):
@@ -101,11 +145,35 @@ class MovieResponse(BaseModel):
 
 class WatchedMovieResponse(BaseModel):
     """Representation of a movie marked as 'Watched'."""
-
     id:         int
     title:      str
     status:     str
     watched_at: str
+
+
+class MessageResponse(BaseModel):
+    id:             int
+    sender_id:      int
+    receiver_id:    int
+    content:        str
+    is_read:        bool
+    is_edited:      bool = False
+    edited_at:      str | None = None
+    message_type:   str
+    attachment_url: str | None = None
+    created_at:     str
+
+class ConversationResponse(BaseModel):
+    participant:    UserMinimalResponse
+    last_message:   MessageResponse | None = None
+    unread_count:   int
+    status:         str = "ACCEPTED"
+
+
+class SimilarityResponse(BaseModel):
+    target_user:    UserMinimalResponse
+    score:          float
+    reasons:        str | None = None
 
 
 # ---------------------------------------------------------------------------

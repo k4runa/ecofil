@@ -7,6 +7,9 @@ import { VercelV0Chat } from "@/components/chat/v0-ai-chat";
 import { MovieDashboard } from "@/components/movies/dashboard";
 import { MovieSearch } from "@/components/movies/movie-search";
 import { RecommendationsDashboard } from "@/components/movies/recommendations";
+import { FavoritesDashboard } from "@/components/movies/favorites-dashboard";
+import { SimilarMindsDashboard } from "@/components/social/similar-minds-dashboard";
+import { MessagesDashboard } from "@/components/social/messages-dashboard";
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -26,14 +29,16 @@ import { SettingsDashboard } from "@/components/settings/dashboard";
 import { Header } from "@/components/ui/header-2";
 import { CollapsibleSidebar } from "@/components/ui/collapsible-sidebar";
 
+
 export default function Home() {
   const { isAuthenticated, user, isLoading, checkAuth, logout } =
     useAuthStore();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "movies" | "recommendations" | "settings"
+    "movies" | "recommendations" | "settings" | "social" | "favorites" | "messages"
   >("movies");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedSocialUser, setSelectedSocialUser] = useState<any | null>(null);
   const [chatPlaceholder, setChatPlaceholder] = useState("Ask Eco anything...");
 
   const placeholders = [
@@ -111,6 +116,7 @@ export default function Home() {
               setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }}
               logout={logout}
               user={user}
+              onSelectUser={setSelectedSocialUser}
             />
           </motion.div>
         )}
@@ -123,6 +129,7 @@ export default function Home() {
           setActiveTab={setActiveTab}
           logout={logout}
           user={user}
+          onSelectUser={setSelectedSocialUser}
         />
       </div>
 
@@ -175,6 +182,40 @@ export default function Home() {
                     </div>
                   )}
 
+                  {activeTab === "social" && (
+                    <div className="space-y-8">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-4xl font-black tracking-tighter">
+                          Similar Minds
+                        </h3>
+                        <p className="text-muted-foreground font-medium">
+                          Discover users with cinematic tastes identical to yours.
+                        </p>
+                      </div>
+                      <SimilarMindsDashboard onTabChange={setActiveTab} />
+                    </div>
+                  )}
+
+                  {activeTab === "messages" && (
+                    <div className="space-y-8 h-full">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-4xl font-black tracking-tighter">
+                          Messages
+                        </h3>
+                        <p className="text-muted-foreground font-medium">
+                          Connect with your cinematic kindred spirits.
+                        </p>
+                      </div>
+                      <MessagesDashboard />
+                    </div>
+                  )}
+
+                  {activeTab === "favorites" && (
+                    <div className="space-y-8">
+                      <FavoritesDashboard />
+                    </div>
+                  )}
+
                   {activeTab === "settings" && (
                     <div className="space-y-8 w-full max-w-4xl">
                       <div className="flex flex-col gap-2">
@@ -194,6 +235,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+
 
       {/* Floating AI Oracle Toggle */}
       <AnimatePresence>

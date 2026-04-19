@@ -22,6 +22,10 @@ from sqlalchemy import (
     Boolean,
     select,
     delete,
+    update,
+    or_,
+    and_,
+    func,
     UniqueConstraint,
 )
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
@@ -162,37 +166,55 @@ class User(Base):
         movies — one-to-many link to the Movies table (tracked films).
     """
 
-    __tablename__                           =   "users"
+    __tablename__                                           =   "users"
 
-    id:             Mapped[int]             =   mapped_column(primary_key=True)
-    username:       Mapped[str]             =   mapped_column(String, unique=True, nullable=False)
-    role:           Mapped[str]             =   mapped_column(String, nullable=False, default="user", server_default="user")
-    password:       Mapped[str]             =   mapped_column(String, nullable=False)
-    email:          Mapped[str]             =   mapped_column(String, unique=True, nullable=False)
+    id:                             Mapped[int]             =   mapped_column(primary_key=True)
+    username:                       Mapped[str]             =   mapped_column(String, unique=True, nullable=False)
+    nickname:                       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    role:                           Mapped[str]             =   mapped_column(String, nullable=False, default="user", server_default="user")
+    password:                       Mapped[str]             =   mapped_column(String, nullable=False)
+    email:                          Mapped[str]             =   mapped_column(String, unique=True, nullable=False)
+    avatar_url:                     Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    bio:                            Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    gender:                         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    age:                            Mapped[Optional[int]]   =   mapped_column(Integer, nullable=True)
+    location:                       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    show_age:                       Mapped[bool]            =   mapped_column(Boolean, default=True)
+    show_gender:                    Mapped[bool]            =   mapped_column(Boolean, default=True)
+    show_location:                  Mapped[bool]            =   mapped_column(Boolean, default=True)
+    show_bio:                       Mapped[bool]            =   mapped_column(Boolean, default=True)
+    show_favorites:                 Mapped[bool]            =   mapped_column(Boolean, default=True)
 
     # --- Device fingerprint (collected at signup) ---
-    device:         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    device_name:    Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    machine:        Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    os:             Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    memory:         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    hostname:       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    device:                         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    device_name:                    Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    machine:                        Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    os:                             Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    memory:                         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    hostname:                       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
 
     # --- Network / geolocation ---
-    country:        Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    city:           Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    ip:             Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    country:                        Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    city:                           Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    ip:                             Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
 
     # --- Account settings ---
-    ai_enabled:     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    max_toasts:     Mapped[int]             =   mapped_column(Integer, nullable=False, default=5, server_default="5")
+    ai_enabled:                     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    max_toasts:                     Mapped[int]             =   mapped_column(Integer, nullable=False, default=5, server_default="5")
+    dm_notifications:               Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    muted_users:                    Mapped[Optional[str]]   =   mapped_column(String, nullable=True) # Comma-separated list of IDs
 
     # --- Account lifecycle ---
-    is_deleted:     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=False)
-    created_at:     Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
-    last_seen:      Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    is_deleted:                     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=False)
+    is_private:                     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=False)  # If true, won't show in 'Similar Minds'
+    created_at:                     Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    last_seen:                      Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
-    movies:         Mapped[List["Movies"]]  =   relationship("Movies", back_populates="user", lazy="selectin")
+    # --- Relationships ---
+    movies:                         Mapped[List["Movies"]]  =   relationship("Movies", back_populates="user", lazy="selectin")
+    sent_messages:                  Mapped[List["Message"]] =   relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    received_messages:              Mapped[List["Message"]] =   relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
+    conversations:                  Mapped[List["Conversation"]] = relationship("Conversation", primaryjoin="or_(User.id==Conversation.user1_id, User.id==Conversation.user2_id)", viewonly=True)
 
 
 class Movies(Base):
@@ -221,9 +243,10 @@ class Movies(Base):
     poster_url:         Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
     release_date:       Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
     status:             Mapped[str]                     =   mapped_column(String, nullable=False, default="Not yet")
+    is_favorite:        Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     user:               Mapped["User"]                  =   relationship("User", back_populates="movies")
-    watched_movies:     Mapped[List["WatchedMovies"]]   =   relationship("WatchedMovies",back_populates="who_watched",lazy="selectin",cascade="all, delete-orphan",)
+    watched_movies:     Mapped[List["WatchedMovies"]]   =   relationship("WatchedMovies",back_populates="movie",lazy="selectin",cascade="all, delete-orphan",)
 
 
 class WatchedMovies(Base):
@@ -238,14 +261,69 @@ class WatchedMovies(Base):
     __tablename__                                   =   "watched_movies"
     __table_args__                                  =   (UniqueConstraint("user_id", "movie_id", name="uq_user_watched_movie"),)
 
-    id:                         Mapped[int]         =   mapped_column(primary_key=True)
-    user_id:                    Mapped[int]         =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    movie_id:                   Mapped[int]         =   mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), index=True)
-    title:                      Mapped[str]         =   mapped_column(String, nullable=False)
-    status:                     Mapped[str]         =   mapped_column(String, nullable=False, default="Watched")
-    watched_at:                 Mapped[str]         =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    id:                 Mapped[int]                 =   mapped_column(primary_key=True)
+    user_id:            Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    movie_id:           Mapped[int]                 =   mapped_column(ForeignKey("movies.id", ondelete="CASCADE"), index=True)
+    title:              Mapped[str]                 =   mapped_column(String, nullable=False)
+    status:             Mapped[str]                 =   mapped_column(String, nullable=False)
+    watched_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
-    who_watched:                Mapped["Movies"]    =   relationship("Movies", back_populates="watched_movies")
+    who_watched:        Mapped["User"]              =   relationship("User")
+    movie:              Mapped["Movies"]            =   relationship("Movies", back_populates="watched_movies")
+
+
+class Message(Base):
+    """
+    Private message between two users.
+    """
+    __tablename__                                   =   "messages"
+
+    id:                 Mapped[int]                 =   mapped_column(primary_key=True)
+    sender_id:          Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    receiver_id:        Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    content:            Mapped[str]                 =   mapped_column(String, nullable=False)
+    is_read:            Mapped[bool]                =   mapped_column(Boolean, default=False)
+    message_type:       Mapped[str]                 =   mapped_column(String, default="text", server_default="text") # text, image, movie_recommendation
+    attachment_url:     Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
+    deleted_by_sender:   Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
+    deleted_by_receiver: Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
+    is_edited:          Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
+    edited_at:          Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
+    created_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+
+    sender:             Mapped["User"]              =   relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
+    receiver:           Mapped["User"]              =   relationship("User", foreign_keys=[receiver_id], back_populates="received_messages")
+
+
+class Conversation(Base):
+    """
+    Tracks the status of a conversation between two users (e.g. accepted, pending).
+    """
+    __tablename__                                   =   "conversations"
+    __table_args__                                  =   (UniqueConstraint("user1_id", "user2_id", name="uq_user_pair"),)
+
+    id:                 Mapped[int]                 =   mapped_column(primary_key=True)
+    user1_id:           Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user2_id:           Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    status:             Mapped[str]                 =   mapped_column(String, default="PENDING", server_default="PENDING") # PENDING, ACCEPTED, BLOCKED
+    created_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class SimilarityMatch(Base):
+    """
+    Pre-calculated similarity between two users to avoid heavy computations on every request.
+    Stores why they match (e.g., shared genres or movies).
+    """
+    __tablename__                                   =   "similarity_matches"
+    __table_args__                                  =   (UniqueConstraint("user_id", "target_id", name="uq_user_similarity_pair"),)
+
+    id:                 Mapped[int]                 =   mapped_column(primary_key=True)
+    user_id:            Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    target_id:          Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    score:              Mapped[float]               =   mapped_column(nullable=False)
+    reasons:            Mapped[Optional[str]]       =   mapped_column(String, nullable=True) # e.g. "Both love Horror"
+    last_updated:       Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +549,17 @@ class UserManager:
             await session.rollback()
 
     @transaction
+    async def update_last_seen(self, session: AsyncSession, username: str) -> None:
+        """
+        Update the last_seen timestamp for a user to the current time.
+        """
+        stmt = select(User).where(User.username == username, User.is_deleted == False)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            user.last_seen = datetime.now(timezone.utc).isoformat()
+
+    @transaction
     async def get_user_by_username(self, session: AsyncSession, username: str) -> dict:
         """
         Retrieve a single user record by username.
@@ -581,6 +670,24 @@ class UserManager:
         return [{c.name: getattr(u, c.name) for c in u.__table__.columns if c.name not in SENSITIVE_FIELDS} for u in users]
 
     @transaction
+    async def update_profile(self, session: AsyncSession, username: str, data: dict) -> bool:
+        """
+        Update multiple profile fields at once.
+        """
+        stmt = select(User).where(User.username == username, User.is_deleted == False)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            return False
+
+        for key, value in data.items():
+            if hasattr(user, key) and value is not None:
+                setattr(user, key, value)
+        
+        return True
+
+    @transaction
     async def update_user_field(self, session: AsyncSession,username: str, field: str, value: Any, current_password: str | None = None) -> bool:
         """
         Update a single field on a user record.
@@ -600,7 +707,11 @@ class UserManager:
             raise UserNotFoundError(username)
 
         f_lower                     =   field.lower()
-        ALLOWED_FIELDS              =   {"password", "email", "ai_enabled", "username", "max_toasts"}
+        ALLOWED_FIELDS              =   {
+            "password", "email", "ai_enabled", "username", "nickname", "max_toasts", "avatar_url", 
+            "bio", "gender", "age", "location",
+            "show_age", "show_gender", "show_location", "show_bio", "show_favorites", "is_private"
+        }
 
         if f_lower not in ALLOWED_FIELDS:
             logger.warning(f"Unauthorized update attempt on field '{field}' for user {username}")
@@ -922,3 +1033,496 @@ class MovieManager:
 
         session.add(movie)
         return True
+
+    @transaction
+    async def toggle_favorite(self, session: AsyncSession, username: str, movie_id: int) -> dict:
+        """
+        Toggle the is_favorite status of a movie.
+        Restricts favorites to a maximum of 3 per user.
+        """
+        user_stmt = select(User).where(User.username == username, User.is_deleted == False)
+        user_result = await session.execute(user_stmt)
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise UserNotFoundError(username)
+
+        movie_stmt = select(Movies).where(Movies.id == movie_id, Movies.user_id == user.id)
+        movie_result = await session.execute(movie_stmt)
+        movie = movie_result.scalar_one_or_none()
+        
+        if not movie:
+            raise MovieNotFoundError(str(movie_id))
+
+        if not movie.is_favorite:
+            # Check how many favorites they already have
+            fav_count_stmt = select(Movies).where(Movies.user_id == user.id, Movies.is_favorite == True)
+            fav_count_res = await session.execute(fav_count_stmt)
+            current_favorites = fav_count_res.scalars().all()
+            if len(current_favorites) >= 3:
+                raise ValueError("You can only have up to 3 favorites.")
+            movie.is_favorite = True
+            is_fav = True
+        else:
+            movie.is_favorite = False
+            is_fav = False
+            
+        return {"success": True, "is_favorite": is_fav}
+
+class SocialManager:
+    """
+    Handles all social-related database operations:
+    Messaging, Similar Minds discovery, and User Profiles.
+    """
+
+    def __init__(self):
+        pass
+
+    @property
+    def session(self):
+        return _session_maker
+
+    @staticmethod
+    def transaction(func):
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            async with self.session() as session:
+                try:
+                    result = await func(self, session, *args, **kwargs)
+                    await session.commit()
+                    return result
+                except Exception as e:
+                    await session.rollback()
+                    logger.error(f"Error in {func.__name__}: {str(e)}")
+                    raise
+
+        return wrapper
+
+    @transaction
+    async def get_similar_users(self, session: AsyncSession, user_id: int, limit: int = 5) -> list[dict]:
+        """
+        Fetch pre-calculated similar users for the given user ID.
+        Skips private accounts and the user themselves.
+        """
+        # Subquery to find IDs of users already in conversations
+        messaged_subq = select(Conversation.user1_id).where(Conversation.user2_id == user_id).union(
+            select(Conversation.user2_id).where(Conversation.user1_id == user_id)
+        )
+
+        stmt = (
+            select(SimilarityMatch, User)
+            .join(User, User.id == SimilarityMatch.target_id)
+            .where(SimilarityMatch.user_id == user_id)
+            .where(User.is_private == False)
+            .where(User.is_deleted == False)
+            .where(User.id != user_id)
+            .where(User.id.notin_(messaged_subq))
+            .order_by(SimilarityMatch.score.desc())
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        matches = result.all()
+
+        return [
+            {
+                "target_user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "nickname": user.nickname,
+                    "avatar_url": user.avatar_url,
+                    "bio": user.bio if user.show_bio else None,
+                    "last_seen": user.last_seen,
+                },
+                "score": sim.score,
+                "reasons": sim.reasons,
+            }
+            for sim, user in matches
+        ]
+
+    @transaction
+    async def send_message(self, session: AsyncSession, sender_id: int, receiver_id: int, content: str, message_type: str = "text", attachment_url: str | None = None) -> Message:
+        """
+        Send a private message. Ensures a Conversation record exists.
+        Initial status is PENDING if it's the first message ever.
+        """
+        if sender_id == receiver_id:
+            raise ValueError("You cannot send a message to yourself.")
+
+        # Ensure conversation exists
+        u1, u2 = sorted([sender_id, receiver_id])
+        stmt = select(Conversation).where(Conversation.user1_id == u1, Conversation.user2_id == u2)
+        res = await session.execute(stmt)
+        conv = res.scalar_one_or_none()
+
+        if not conv:
+            # First message ever between these two -> PENDING
+            conv = Conversation(user1_id=u1, user2_id=u2, status="PENDING")
+            session.add(conv)
+            await session.flush()
+        
+        # Update conversation timestamp
+        conv.updated_at = datetime.now(timezone.utc).isoformat()
+
+        msg = Message(
+            sender_id=sender_id, 
+            receiver_id=receiver_id, 
+            content=content,
+            message_type=message_type,
+            attachment_url=attachment_url
+        )
+        session.add(msg)
+        await session.flush()
+        return msg
+
+    @transaction
+    async def edit_message(self, session: AsyncSession, message_id: int, user_id: int, new_content: str) -> Message:
+        """
+        Edit an existing message if the user is the sender.
+        """
+        stmt = select(Message).where(Message.id == message_id, Message.sender_id == user_id)
+        res = await session.execute(stmt)
+        msg = res.scalar_one_or_none()
+
+        if not msg:
+            raise ValueError("Message not found or you are not the sender.")
+
+        msg.content = new_content
+        msg.is_edited = True
+        msg.edited_at = datetime.now(timezone.utc).isoformat()
+        return msg
+
+    @transaction
+    async def delete_message(self, session: AsyncSession, message_id: int, user_id: int):
+        """
+        Hard delete a message if the user is the sender.
+        """
+        stmt = delete(Message).where(Message.id == message_id, Message.sender_id == user_id)
+        await session.execute(stmt)
+
+    @transaction
+    async def handle_request(self, session: AsyncSession, user_id: int, other_id: int, action: str):
+        """
+        Accept or Decline a message request.
+        """
+        u1, u2 = sorted([user_id, other_id])
+        stmt = select(Conversation).where(Conversation.user1_id == u1, Conversation.user2_id == u2)
+        res = await session.execute(stmt)
+        conv = res.scalar_one_or_none()
+
+        if not conv:
+            raise ValueError("No conversation request found.")
+
+        if action == "accept":
+            conv.status = "ACCEPTED"
+            conv.updated_at = datetime.now(timezone.utc).isoformat()
+        elif action == "decline":
+            # Delete conversation and all messages
+            await session.execute(delete(Message).where(
+                or_(
+                    and_(Message.sender_id == user_id, Message.receiver_id == other_id),
+                    and_(Message.sender_id == other_id, Message.receiver_id == user_id)
+                )
+            ))
+            await session.execute(delete(Conversation).where(Conversation.id == conv.id))
+        return True
+
+    @transaction
+    async def get_messages(self, session: AsyncSession, user_a: int, user_b: int) -> List[dict]:
+        """
+        Fetch full message history between two users, excluding deleted ones.
+        """
+        stmt = select(Message).where(
+            or_(
+                and_(Message.sender_id == user_a, Message.receiver_id == user_b, Message.deleted_by_sender == False),
+                and_(Message.sender_id == user_b, Message.receiver_id == user_a, Message.deleted_by_receiver == False)
+            )
+        ).order_by(Message.created_at.asc())
+        
+        result = await session.execute(stmt)
+        messages = result.scalars().all()
+        
+        return [
+            {
+                "id": m.id,
+                "sender_id": m.sender_id,
+                "receiver_id": m.receiver_id,
+                "content": m.content,
+                "is_read": m.is_read,
+                "is_edited": m.is_edited,
+                "edited_at": m.edited_at,
+                "message_type": m.message_type,
+                "attachment_url": m.attachment_url,
+                "created_at": m.created_at
+            }
+            for m in messages
+        ]
+
+    @transaction
+    async def get_conversations(self, session: AsyncSession, user_id: int, status: str = "ACCEPTED") -> List[dict]:
+        """
+        Get all conversations for a user with specific status.
+        ACCEPTED: Normal inbox.
+        PENDING: Message requests (only where current user is receiver of first message).
+        """
+        # Get conversations from the new table
+        stmt = select(Conversation).where(
+            or_(Conversation.user1_id == user_id, Conversation.user2_id == user_id),
+            Conversation.status == status
+        )
+        
+        # For PENDING, we only want to show it to the receiver of the conversation
+        # However, 'PENDING' usually means 'I haven't accepted yet'.
+        # If I sent the first message, I see it as 'Pending' in my sent list? 
+        # Usually, sender sees it in normal list but labeled as 'Sent Request'.
+        # Let's simplify: PENDING is for the receiver.
+        
+        res = await session.execute(stmt)
+        convs = res.scalars().all()
+        
+        results = []
+        for c in convs:
+            other_id = c.user2_id if c.user1_id == user_id else c.user1_id
+            
+            # For PENDING, we only want to show it to the receiver of the conversation request
+            if status == "PENDING":
+                # Find the very first message in this conversation
+                stmt = select(Message).where(
+                    or_(
+                        and_(Message.sender_id == user_id, Message.receiver_id == other_id),
+                        and_(Message.sender_id == other_id, Message.receiver_id == user_id)
+                    )
+                ).order_by(Message.created_at.asc()).limit(1)
+                first_msg_res = await session.execute(stmt)
+                first_msg = first_msg_res.scalar()
+                
+                # If I was the sender of the very first message, it's not a request for me.
+                if first_msg and first_msg.sender_id == user_id:
+                    continue
+
+            # Get last message
+            last_msg_stmt = select(Message).where(
+                or_(
+                    and_(Message.sender_id == user_id, Message.receiver_id == other_id, Message.deleted_by_sender == False),
+                    and_(Message.sender_id == other_id, Message.receiver_id == user_id, Message.deleted_by_receiver == False)
+                )
+            ).order_by(Message.created_at.desc()).limit(1)
+            
+            last_msg_res = await session.execute(last_msg_stmt)
+            last_msg = last_msg_res.scalar_one_or_none()
+            
+            if not last_msg: continue
+            
+            # Get unread count
+            unread_stmt = select(func.count(Message.id)).where(
+                Message.sender_id == other_id,
+                Message.receiver_id == user_id,
+                Message.is_read == False,
+                Message.deleted_by_receiver == False
+            )
+            unread_res = await session.execute(unread_stmt)
+            unread_count = unread_res.scalar() or 0
+            
+            # Get participant info
+            p_stmt = select(User).where(User.id == other_id)
+            p_res = await session.execute(p_stmt)
+            participant = p_res.scalar_one_or_none()
+            
+            if not participant: continue
+            
+            results.append({
+                "participant": {
+                    "id": participant.id,
+                    "username": participant.username,
+                    "nickname": participant.nickname,
+                    "avatar_url": participant.avatar_url,
+                    "bio": participant.bio if participant.show_bio else None,
+                    "last_seen": participant.last_seen
+                },
+                "status": c.status,
+                "last_message": {
+                    "id": last_msg.id,
+                    "sender_id": last_msg.sender_id,
+                    "receiver_id": last_msg.receiver_id,
+                    "content": last_msg.content,
+                    "is_read": last_msg.is_read,
+                    "is_edited": last_msg.is_edited,
+                    "created_at": last_msg.created_at
+                },
+                "unread_count": unread_count
+            })
+        
+        results.sort(key=lambda x: x["last_message"]["created_at"] if x["last_message"] else "", reverse=True)
+        return results
+
+    @transaction
+    async def mark_messages_as_read(self, session: AsyncSession, receiver_id: int, sender_id: int):
+        """
+        Mark all messages from sender to receiver as read.
+        """
+        stmt = update(Message).where(
+            Message.sender_id == sender_id,
+            Message.receiver_id == receiver_id,
+            Message.is_read == False
+        ).values(is_read=True)
+        await session.execute(stmt)
+
+    @transaction
+    async def delete_conversation(self, session: AsyncSession, user_id: int, other_id: int):
+        """
+        Logically delete conversation history for the current user.
+        """
+        # Sent messages by current user
+        stmt_sent = update(Message).where(
+            Message.sender_id == user_id,
+            Message.receiver_id == other_id
+        ).values(deleted_by_sender=True)
+        
+        # Received messages by current user
+        stmt_recv = update(Message).where(
+            Message.sender_id == other_id,
+            Message.receiver_id == user_id
+        ).values(deleted_by_receiver=True)
+        
+        await session.execute(stmt_sent)
+        await session.execute(stmt_recv)
+
+
+    @transaction
+    async def update_privacy(self, session: AsyncSession, user_id: int, is_private: bool) -> bool:
+        """
+        Update user's privacy status.
+        """
+        stmt = select(User).where(User.id == user_id)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            user.is_private = is_private
+            return True
+        return False
+
+    async def recalculate_user_similarity(self, user_id: int):
+        """
+        Heavy operation: Re-calculates similarity between this user and all others.
+        In a production environment, this should be a background task (Celery/RQ).
+        """
+        async with self.session() as session:
+            # 1. Get current user's movies/genres
+            user_stmt = select(Movies).where(Movies.user_id == user_id)
+            user_res = await session.execute(user_stmt)
+            user_movies = user_res.scalars().all()
+            user_movie_ids = {m.tmdb_id for m in user_movies}
+            user_genres = Counter()
+            for m in user_movies:
+                if m.genre_ids:
+                    user_genres.update(m.genre_ids.split(","))
+
+            # 2. Get all other public users
+            others_stmt = select(User.id).where(User.id != user_id, User.is_private == False, User.is_deleted == False)
+            others_res = await session.execute(others_stmt)
+            other_ids = others_res.scalars().all()
+
+            if not other_ids:
+                logger.info("No other users found")
+                return
+
+            # Fetch all movies for all other users in ONE query
+            all_other_movies_stmt = select(Movies).where(Movies.user_id.in_(other_ids))
+            all_other_movies_res = await session.execute(all_other_movies_stmt)
+            all_other_movies = all_other_movies_res.scalars().all()
+
+            # Group by user_id
+            from collections import defaultdict
+            movies_by_user = defaultdict(list)
+            for m in all_other_movies:
+                movies_by_user[m.user_id].append(m)
+
+            for other_id in other_ids:
+                other_movies = movies_by_user[other_id]
+                other_movie_ids = {m.tmdb_id for m in other_movies}
+                
+                # Shared movies score
+                shared_movies = user_movie_ids.intersection(other_movie_ids)
+                movie_score = len(shared_movies) * 0.2 # 5 shared movies = 1.0
+
+                # Shared genres score
+                other_genres = Counter()
+                for m in other_movies:
+                    if m.genre_ids:
+                        other_genres.update(m.genre_ids.split(","))
+                
+                # Simple Jaccard-like similarity for genres
+                common_genres = set(user_genres.keys()).intersection(set(other_genres.keys()))
+                genre_score = len(common_genres) * 0.1 # 10 shared genres = 1.0
+                
+                total_score = min(movie_score + genre_score, 1.0)
+                
+                if total_score > 0.1:
+                    # Upsert similarity match
+                    match_stmt = select(SimilarityMatch).where(SimilarityMatch.user_id == user_id, SimilarityMatch.target_id == other_id)
+                    match_res = await session.execute(match_stmt)
+                    match = match_res.scalar_one_or_none()
+                    
+                    reasons = []
+                    if shared_movies:
+                        reasons.append(f"Both watched {len(shared_movies)} same films")
+                    if common_genres:
+                        reasons.append(f"Shared love for {len(common_genres)} genres")
+
+                    if not match:
+                        match = SimilarityMatch(user_id=user_id, target_id=other_id, score=total_score, reasons=", ".join(reasons))
+                        session.add(match)
+                    else:
+                        match.score = total_score
+                        match.reasons = ", ".join(reasons)
+                        match.last_updated = datetime.now(timezone.utc).isoformat()
+
+            await session.commit()
+
+    @transaction
+    async def get_profile(self, session: AsyncSession, user_id: int) -> dict:
+        """
+        Fetch public profile data for a user including top genres and favorite movies.
+        """
+        user_stmt = select(User).where(User.id == user_id, User.is_deleted == False)
+        user_result = await session.execute(user_stmt)
+        user = user_result.scalar_one_or_none()
+        
+        if not user:
+            raise UserNotFoundError(str(user_id))
+
+        # Get favorites
+        fav_stmt = select(Movies).where(Movies.user_id == user.id, Movies.is_favorite == True).limit(3)
+        fav_res = await session.execute(fav_stmt)
+        favorites = [{
+            "id": m.id,
+            "tmdb_id": m.tmdb_id,
+            "title": m.title,
+            "poster_url": m.poster_url,
+            "release_date": m.release_date
+        } for m in fav_res.scalars().all()]
+
+        # Get top genres
+        movies_stmt = select(Movies.genre_ids).where(Movies.user_id == user.id)
+        movies_res = await session.execute(movies_stmt)
+        genre_rows = movies_res.scalars().all()
+        genre_ids = ",".join(genre_rows).strip(",")
+        
+        top_genres = []
+        if genre_ids:
+            ids = [int(i) for i in genre_ids.split(",")]
+            count = Counter(ids)
+            top_genres = [item for item, _ in count.most_common(3)]
+
+        return {
+            "id": user.id,
+            "username": user.username,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio if user.show_bio else None,
+            "gender": user.gender if user.show_gender else None,
+            "age": user.age if user.show_age else None,
+            "location": user.location if user.show_location else None,
+            "created_at": user.created_at,
+            "last_seen": user.last_seen,
+            "favorites": favorites if user.show_favorites else [],
+            "top_genres": top_genres if user.show_favorites else []
+        }

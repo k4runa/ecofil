@@ -8,21 +8,29 @@ import {
   ChevronDown,
   ChevronsRight,
   User,
+  Star,
+  Users,
+  Mail
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getFullUrl } from "@/lib/api";
+import { useSocialStore } from "@/lib/store";
 
 export const CollapsibleSidebar = ({ 
   activeTab, 
   setActiveTab, 
   logout,
-  user
+  user,
+  onSelectUser
 }: { 
   activeTab: string, 
   setActiveTab: (tab: any) => void,
   logout: () => void,
-  user: any
+  user: any,
+  onSelectUser: (user: any) => void
 }) => {
   const [open, setOpen] = useState(true);
+  const { unreadTotal } = useSocialStore();
 
   return (
     <nav
@@ -34,7 +42,7 @@ export const CollapsibleSidebar = ({
     >
       <TitleSection open={open} user={user} />
 
-      <div className="space-y-1 flex-1">
+      <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar">
         <Option
           Icon={Film}
           title="My collections"
@@ -47,6 +55,31 @@ export const CollapsibleSidebar = ({
           Icon={Compass}
           title="Discover"
           id="recommendations"
+          selected={activeTab}
+          setSelected={setActiveTab}
+          open={open}
+        />
+        <Option
+          Icon={Users}
+          title="Similar Minds"
+          id="social"
+          selected={activeTab}
+          setSelected={setActiveTab}
+          open={open}
+        />
+        <Option
+          Icon={Mail}
+          title="Messages"
+          id="messages"
+          selected={activeTab}
+          setSelected={setActiveTab}
+          open={open}
+          badgeCount={unreadTotal}
+        />
+        <Option
+          Icon={Star}
+          title="Favorites"
+          id="favorites"
           selected={activeTab}
           setSelected={setActiveTab}
           open={open}
@@ -81,7 +114,7 @@ export const CollapsibleSidebar = ({
   );
 };
 
-const Option = ({ Icon, title, id, selected, setSelected, open }: any) => {
+const Option = ({ Icon, title, id, selected, setSelected, open, badgeCount }: any) => {
   const isSelected = selected === id;
   
   return (
@@ -94,14 +127,24 @@ const Option = ({ Icon, title, id, selected, setSelected, open }: any) => {
           : "text-muted-foreground hover:bg-card hover:text-foreground"
       )}
     >
-      <div className="grid h-full w-14 place-content-center">
+      <div className="grid h-full w-14 place-content-center relative">
         <Icon className={cn("h-4 w-4", isSelected ? "text-foreground" : "text-muted-foreground")} />
+        {badgeCount > 0 && (
+          <div className="absolute top-2 right-3 size-2 bg-primary rounded-full border border-background shadow-sm animate-pulse" />
+        )}
       </div>
       
       {open && (
-        <span className="text-xs font-black uppercase tracking-widest">
-          {title}
-        </span>
+        <div className="flex-1 flex justify-between items-center pr-4">
+          <span className="text-xs font-black uppercase tracking-widest">
+            {title}
+          </span>
+          {badgeCount > 0 && (
+            <span className="text-[9px] font-black bg-primary text-white px-1.5 py-0.5 rounded-md shadow-sm">
+              {badgeCount}
+            </span>
+          )}
+        </div>
       )}
 
       {isSelected && (
@@ -115,13 +158,10 @@ const TitleSection = ({ open, user }: any) => {
   return (
     <div className="mb-8 border-b border-border pb-6 pt-2">
       <div className="flex items-center gap-3 px-2">
-        <Logo />
+        <Logo user={user} />
         {open && (
           <div className="flex flex-col">
-            <span className="block text-sm font-black tracking-tighter text-foreground">
-              CINEWAVE
-            </span>
-            <span className="block text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+            <span className="block text-xs font-black uppercase tracking-widest text-foreground">
               {user?.username || 'Guest'}
             </span>
           </div>
@@ -131,10 +171,23 @@ const TitleSection = ({ open, user }: any) => {
   );
 };
 
-const Logo = () => {
+const Logo = ({ user }: any) => {
+  const hasAvatar = !!user?.avatar_url;
+  
   return (
-    <div className="grid size-10 shrink-0 place-content-center rounded-xl bg-foreground shadow-lg">
-      <Film className="w-5 h-5 text-background" strokeWidth={3} />
+    <div className={cn(
+      "size-10 shrink-0 rounded-xl shadow-lg overflow-hidden border border-border flex items-center justify-center",
+      !hasAvatar && "bg-foreground"
+    )}>
+      {hasAvatar ? (
+        <img 
+          src={getFullUrl(user.avatar_url)} 
+          alt="Logo" 
+          className="w-full h-full object-cover block" 
+        />
+      ) : (
+        <Film className="w-5 h-5 text-background" strokeWidth={3} />
+      )}
     </div>
   );
 };

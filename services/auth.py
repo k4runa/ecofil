@@ -185,6 +185,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
                 if user_in_db.get("is_deleted"):
                     logger.warning(f"Attempted access by deleted user: {username}")
                     raise credentials_exception
+                
+                # Update last_seen asynchronously
+                await users_manager.update_last_seen(username)
             except UserNotFoundError:
                 logger.warning(f"Attempted access by non-existent user: {username}")
                 raise credentials_exception

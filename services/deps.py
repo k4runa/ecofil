@@ -12,7 +12,7 @@ Usage in routers:
 """
 
 import os
-from .database import UserManager, MovieManager, init_database
+from .database import UserManager, MovieManager, SocialManager, init_database
 from dotenv import load_dotenv
 import logging
 from slowapi import Limiter
@@ -60,3 +60,4 @@ init_database(DATABASE_URL)
 # ---------------------------------------------------------------------------
 users_manager = UserManager()
 movies_manager = MovieManager()
+social_manager = SocialManager()

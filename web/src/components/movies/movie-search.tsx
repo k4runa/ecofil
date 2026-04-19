@@ -93,6 +93,7 @@ export function MovieSearch() {
   };
 
   const handleAddMovie = async (movie: any) => {
+    if (!user?.username) return;
     const tmdbId = movie.tmdb_id;
     if (addingId === tmdbId || trackedIds.has(tmdbId)) return;
     setAddingId(tmdbId);

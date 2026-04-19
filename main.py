@@ -30,7 +30,7 @@ from services.database import (
     ReservedUsernameError,
 )
 from services.deps import users_manager
-from routers import auth, users, movies, ai
+from routers import auth, users, movies, ai, social
 from sqlalchemy.exc import IntegrityError
 from services.cache import cache_service
 import asyncio
@@ -46,8 +46,7 @@ async def lifespan(app: FastAPI):
     At startup, creates database tables and ensures that at least one
     admin account is seeded.
     """    
-    logger.info("Application startup: Creating tables and seeding admin...")
-    await users_manager.create_tables()
+    logger.info("Application startup: Seeding admin if missing...")
     await users_manager.ensure_admin_exists()  # type: ignore
     # Start background cache cleaner
     cache_task = asyncio.create_task(cache_service.clear_expired())
@@ -70,7 +69,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; "
             "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; "
-            "img-src 'self' https://image.tmdb.org https://images.placeholders.dev data:; "
+            "img-src 'self' https://image.tmdb.org https://images.placeholders.dev data: blob:; "
             "connect-src 'self' https://api.themoviedb.org https://accounts.google.com/gsi/; "
             "font-src 'self' https://fonts.gstatic.com; "
             "frame-src https://accounts.google.com/gsi/; "
@@ -82,6 +81,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # Application Factory
 # ---------------------------------------------------------------------------
 # Enable documentation only in DEBUG mode (Security hardening)
+# ---------------------------------------------------------------------------
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 from services.deps import limiter
@@ -120,6 +120,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(movies.router)
 app.include_router(ai.router)
+app.include_router(social.router)
 
 
 @app.get("/health", tags=["system"])
@@ -132,6 +133,7 @@ async def health_check():
 # Served at /ui — the `html=True` flag makes FastAPI serve index.html for
 # directory-level requests, enabling client-side routing.
 # ---------------------------------------------------------------------------
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.mount("/ui", StaticFiles(directory="frontend", html=True), name="frontend")
 
 

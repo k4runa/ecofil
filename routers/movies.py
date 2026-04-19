@@ -1,6 +1,6 @@
 import random
-from fastapi import APIRouter, Depends, HTTPException
-from services.deps import movies_manager, users_manager
+from fastapi import APIRouter, Depends, HTTPException, Request
+from services.deps import movies_manager, users_manager, limiter
 from services.tmdb import (
     search_tmdb_movies,
     fetch_recommendations,
@@ -14,7 +14,8 @@ router              =   APIRouter(prefix="/movies", tags=["Movies"])
 
 
 @router.get("/search")
-async def search_movies(query: str, limit: int = 10):
+@limiter.limit("20/minute")
+async def search_movies(request: Request, query: str, limit: int = 10):
     """
     Search for movies on TMDB and return a list of results.
     """
@@ -54,6 +55,19 @@ async def add_movie(username: str, movie: MovieScheme, current_user: dict = Depe
     await movies_manager.add_movie(username=username, query=movie.query, tmdb_id=movie.tmdb_id)  # type: ignore
     return {"success": True, "message": "Movie successfully added."}
 
+
+@router.post("/{username}/{movie_id}/favorite")
+async def toggle_favorite(username: str, movie_id: int, current_user: dict = Depends(get_current_user)):
+    """
+    Toggle the favorite status of a movie. Max 3 favorites per user.
+    """
+    if current_user.get("username") != username:
+        raise HTTPException(status_code=403, detail="Not authorized to access this resource")
+    try:
+        result = await movies_manager.toggle_favorite(username=username, movie_id=movie_id) # type: ignore
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/recommendations/{username}")
 async def get_recommendations(username: str, current_user: dict = Depends(get_current_user)):

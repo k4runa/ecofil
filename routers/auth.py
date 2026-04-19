@@ -58,6 +58,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
 
 @router.post("/google-login")
+@limiter.limit("5/minute")
 async def google_login(request: Request, body: GoogleLoginRequest):
     """
     Authenticate a user via Google OAuth2.
@@ -107,8 +108,7 @@ async def logout(token: str = Depends(oauth2_scheme)):
                 if ttl > 0:
                     await blacklist_token(token, expires_in_seconds=ttl)
         else:
-            print(f"ERROR: SECRET_KEY IS NOT SET. PLEASE SET IN '.env'")
-            return 
+            raise HTTPException(status_code=500, detail="Internal server configuration error")
     except Exception:
         # If token is invalid or expired, it's essentially already logged out
         pass

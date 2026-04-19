@@ -83,19 +83,6 @@ export function Header({
 				</div>
 
 				<div className="flex items-center gap-3">
-					<div className="hidden sm:flex items-center gap-3 text-right">
-						<div>
-							<p className="text-[10px] font-black tracking-tight leading-none text-foreground uppercase">
-								{user?.username}
-							</p>
-							<p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
-								Enthusiast
-							</p>
-						</div>
-						<div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-							<UserIcon className="w-4 h-4 text-primary" />
-						</div>
-					</div>
 
 					<button
 						onClick={onOpenSettings}

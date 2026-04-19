@@ -14,11 +14,13 @@ Endpoints:
     PATCH  /users/{username}   — Update a single field (auth required).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Body
+import os
+import shutil
 from pydantic import BaseModel
 from services.database import logger
-from services.deps import users_manager
-from services.schemas import UserScheme, APIResponseUser, APIResponseUsersList
+from services.schemas import UserScheme, APIResponseUser, APIResponseUsersList, ProfileUpdate
+from services.deps import users_manager, limiter
 from services.auth import get_current_user, create_access_token, oauth2_scheme, blacklist_token, SECRET_KEY, ALGORITHM
 import jwt
 from datetime import datetime, timezone
@@ -63,7 +65,8 @@ class UpdateUserRequest(BaseModel):
 
 
 @router.post("")
-async def register(user: UserScheme, request: Request):
+@limiter.limit("5/minute")
+async def register(request: Request, user: UserScheme):
     """
     Register a new user account.
 
@@ -109,6 +112,15 @@ async def get_user_by_id(id: int, current_user: dict = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="Admin privileges required")
 
     user = await users_manager.get_user_by_id(id)  # type: ignore
+    return {"success": True, "data": {"user": user}}
+
+
+@router.get("/me", response_model=APIResponseUser)
+async def get_my_profile(current_user: dict = Depends(get_current_user)):
+    """
+    Retrieve the authenticated user's own profile using their token.
+    """
+    user = await users_manager.get_user_by_username(current_user["username"])
     return {"success": True, "data": {"user": user}}
 
 
@@ -169,3 +181,51 @@ async def update_user_field(username: str, v: UpdateUserRequest, current_user: d
         return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.patch("/{username}/profile")
+async def update_user_profile(username: str, profile_data: ProfileUpdate = Body(...), current_user: dict = Depends(get_current_user)):
+    """
+    Update multiple profile fields (bio, age, gender, location) at once.
+    """
+    if current_user.get("username") != username:
+        raise HTTPException(status_code=403, detail="Not authorized to access this resource")
+    
+    # Filter out None values
+    update_dict = {k: v for k, v in profile_data.dict().items() if v is not None}
+    
+    success = await users_manager.update_profile(username, update_dict)
+    return {"success": success}
+
+@router.post("/avatar")
+@limiter.limit("5/minute")
+async def upload_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Upload a profile picture for the authenticated user.
+    Saves the file locally and updates the avatar_url in the database.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image.")
+
+    # Create filename: username_timestamp.ext
+    ext = os.path.splitext(file.filename)[1] if file.filename else ".jpg"
+    filename = f"{current_user['username']}_{int(datetime.now().timestamp())}{ext}"
+    file_path = os.path.join("uploads", filename)
+
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Public URL (local)
+        avatar_url = f"/uploads/{filename}"
+        
+        # Update user in DB
+        await users_manager.update_user_field(current_user["username"], "avatar_url", avatar_url)
+        
+        return {"success": True, "avatar_url": avatar_url}
+    except Exception as e:
+        logger.error(f"Avatar upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not save avatar.")

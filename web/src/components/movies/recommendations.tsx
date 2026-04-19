@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { MovieDetailsModal } from "./movie-details-modal";
+import { EcoLoading } from "./eco-loading";
 
 // Helper function
 function cn(...classes: any[]) {
@@ -48,6 +49,7 @@ export function RecommendationsDashboard() {
   };
 
   const handleTrackMovie = async (movie: any) => {
+    if (!user?.username) return;
     const tmdbId = movie.tmdb_id || movie.id;
     if (trackingId === tmdbId || trackedIds.has(tmdbId)) return;
     setTrackingId(tmdbId);
@@ -72,14 +74,7 @@ export function RecommendationsDashboard() {
   };
 
   if (isRecsLoading && recommendations.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-64 flex-col gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">
-          Eco is analyzing your taste...
-        </p>
-      </div>
-    );
+    return <EcoLoading />;
   }
 
   if (recommendations.length === 0) {
@@ -130,7 +125,7 @@ export function RecommendationsDashboard() {
             <Card
               key={idx}
               onClick={() => setSelectedMovie(movie)}
-              className="bg-card/40 md:backdrop-blur-md border border-border/50 p-4 rounded-[2rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:shadow-2xl hover:shadow-primary/5 overflow-hidden group cursor-pointer"
+              className="bg-card/40 md:backdrop-blur-md border border-border/50 p-4 rounded-[2rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:-translate-y-2 hover:border-zinc-700 overflow-hidden group cursor-pointer"
             >
               {/* Image Section */}
               <div className="w-full aspect-[2/3] bg-accent/30 rounded-[1.5rem] overflow-hidden relative border border-border/10">

@@ -26,6 +26,7 @@ export function MovieDashboard() {
   }, [user]);
 
   const loadMovies = async () => {
+    if (!user?.username) return;
     setIsLoading(true);
     try {
       const res = await movieApi.getMovies(user.username);
@@ -42,7 +43,23 @@ export function MovieDashboard() {
     }
   };
 
+  const handleToggleFavorite = async (movieId: number) => {
+    if (!user?.username) return;
+    try {
+      const res = await movieApi.toggleFavorite(user.username, movieId);
+      if (res.data?.is_favorite) {
+        toast.success("Added to favorites!");
+      } else {
+        toast.success("Removed from favorites.");
+      }
+      await loadMovies();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Failed to update favorite");
+    }
+  };
+
   const handleRemoveMovie = async (movieId: number) => {
+    if (!user?.username) return;
     try {
       await movieApi.deleteMovie(user.username, movieId);
       toast.success("Movie removed from your list");
@@ -97,7 +114,7 @@ export function MovieDashboard() {
               <Card
                 key={idx}
                 onClick={() => setSelectedMovie(movie)}
-                className="bg-card/40 md:backdrop-blur-md border border-border/50 p-4 rounded-[2.5rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:shadow-2xl hover:shadow-primary/5 overflow-hidden group cursor-pointer"
+                className="bg-card/40 md:backdrop-blur-md border border-border/50 p-4 rounded-[2.5rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:-translate-y-2 hover:border-zinc-700 overflow-hidden group cursor-pointer"
               >
                 <div className="w-full aspect-[2/3] bg-accent/30 rounded-[2rem] overflow-hidden relative border border-border/10">
                   <img
@@ -105,6 +122,23 @@ export function MovieDashboard() {
                     alt={movie.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFavorite(movie.id);
+                      }}
+                      className={`p-2.5 rounded-xl border border-border/20 shadow-xl transition-all hover:scale-110 active:scale-90 md:backdrop-blur-xl ${
+                        movie.is_favorite 
+                          ? "bg-yellow-500 text-white border-yellow-400" 
+                          : "bg-background/60 text-muted-foreground hover:text-yellow-500"
+                      }`}
+                      title={movie.is_favorite ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star className={`w-4 h-4 ${movie.is_favorite ? "fill-white" : ""}`} />
+                    </button>
+                  </div>
+
                   <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
                     <Star className="w-3.5 h-3.5 fill-yellow-500" />
                     {movie.vote_average || movie.rating || "0.0"}
