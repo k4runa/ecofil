@@ -84,7 +84,7 @@ export function RecommendationsDashboard() {
 
   if (recommendations.length === 0) {
     return (
-      <div className="p-16 border-2 border-dashed border-border/50 rounded-[3rem] flex flex-col items-center justify-center text-center space-y-6 bg-card/20 backdrop-blur-xl">
+      <div className="p-16 border-2 border-dashed border-border/50 rounded-[3rem] flex flex-col items-center justify-center text-center space-y-6 bg-card/20 md:backdrop-blur-xl">
         <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center border border-primary/20">
           <Sparkles className="w-10 h-10 text-primary" />
         </div>
@@ -108,7 +108,7 @@ export function RecommendationsDashboard() {
         <button
           onClick={handleRefresh}
           disabled={isRecsLoading}
-          className="group flex items-center gap-2 px-6 py-3 bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl text-muted-foreground hover:text-primary hover:bg-accent transition-all disabled:opacity-50 font-bold text-sm shadow-lg"
+          className="group flex items-center gap-2 px-6 py-3 bg-card/40 border border-border/50 rounded-2xl text-muted-foreground hover:text-primary hover:bg-accent transition-all disabled:opacity-50 font-bold text-sm shadow-lg"
         >
           <RefreshCw
             className={cn(
@@ -130,7 +130,7 @@ export function RecommendationsDashboard() {
             <Card
               key={idx}
               onClick={() => setSelectedMovie(movie)}
-              className="bg-card/40 backdrop-blur-md border border-border/50 p-4 rounded-[2rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:shadow-2xl hover:shadow-primary/5 overflow-hidden group cursor-pointer"
+              className="bg-card/40 md:backdrop-blur-md border border-border/50 p-4 rounded-[2rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:shadow-2xl hover:shadow-primary/5 overflow-hidden group cursor-pointer"
             >
               {/* Image Section */}
               <div className="w-full aspect-[2/3] bg-accent/30 rounded-[1.5rem] overflow-hidden relative border border-border/10">
@@ -143,7 +143,7 @@ export function RecommendationsDashboard() {
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
 
-                <div className="absolute top-3 right-3 bg-background/60 backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
+                <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
                   <Star className="w-3.5 h-3.5 fill-yellow-500" />
                   {movie.vote_average || movie.rating || "0.0"}
                 </div>

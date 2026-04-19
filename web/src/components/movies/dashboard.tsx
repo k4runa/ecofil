@@ -65,7 +65,7 @@ export function MovieDashboard() {
         <button
           onClick={loadMovies}
           disabled={isLoading}
-          className="p-4 bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl text-muted-foreground hover:text-primary hover:bg-accent transition-all disabled:opacity-50 shadow-lg"
+          className="p-4 bg-card/40 border border-border/50 rounded-2xl text-muted-foreground hover:text-primary hover:bg-accent transition-all disabled:opacity-50 shadow-lg"
           title="Refresh List"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
@@ -78,7 +78,7 @@ export function MovieDashboard() {
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
         ) : movies.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center space-y-6 bg-card/20 backdrop-blur-md rounded-[3rem] border border-border/50">
+          <div className="flex flex-col items-center justify-center h-64 text-center space-y-6 bg-card/20 rounded-[3rem] border border-border/50">
             <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center">
               <Film className="w-8 h-8 text-muted-foreground opacity-50" />
             </div>
@@ -97,7 +97,7 @@ export function MovieDashboard() {
               <Card
                 key={idx}
                 onClick={() => setSelectedMovie(movie)}
-                className="bg-card/40 backdrop-blur-md border border-border/50 p-4 rounded-[2.5rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:shadow-2xl hover:shadow-primary/5 overflow-hidden group cursor-pointer"
+                className="bg-card/40 md:backdrop-blur-md border border-border/50 p-4 rounded-[2.5rem] flex flex-col gap-4 hover:bg-card/60 transition-all hover:shadow-2xl hover:shadow-primary/5 overflow-hidden group cursor-pointer"
               >
                 <div className="w-full aspect-[2/3] bg-accent/30 rounded-[2rem] overflow-hidden relative border border-border/10">
                   <img
@@ -105,7 +105,7 @@ export function MovieDashboard() {
                     alt={movie.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
-                  <div className="absolute top-3 right-3 bg-background/60 backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
+                  <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
                     <Star className="w-3.5 h-3.5 fill-yellow-500" />
                     {movie.vote_average || movie.rating || "0.0"}
                   </div>

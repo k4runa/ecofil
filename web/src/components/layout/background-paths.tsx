@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 function FloatingPaths({ position }: { position: number }) {
-  const paths = Array.from({ length: 36 }, (_, i) => ({
+  const paths = Array.from({ length: 15 }, (_, i) => ({
     id: i,
     d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
       380 - i * 5 * position
@@ -17,7 +17,7 @@ function FloatingPaths({ position }: { position: number }) {
   }));
 
   return (
-    <div className="absolute inset-0 pointer-events-none">
+    <div className="absolute inset-0 pointer-events-none opacity-50">
       <svg
         className="w-full h-full text-slate-950 dark:text-white"
         viewBox="0 0 696 316"
@@ -38,7 +38,7 @@ function FloatingPaths({ position }: { position: number }) {
               pathOffset: [0, 1, 0],
             }}
             transition={{
-              duration: 20 + Math.random() * 10,
+              duration: 25 + Math.random() * 10,
               repeat: Number.POSITIVE_INFINITY,
               ease: "linear",
             }}
@@ -50,10 +50,8 @@ function FloatingPaths({ position }: { position: number }) {
 }
 
 export function BackgroundPaths({ title = "CineWave" }: { title?: string }) {
-  const words = title.split(" ");
-
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden bg-white dark:bg-neutral-950 -z-10">
+    <div className="fixed inset-0 w-full h-full overflow-hidden bg-white dark:bg-neutral-950 -z-10 hidden md:block">
       <div className="absolute inset-0">
         <FloatingPaths position={1} />
         <FloatingPaths position={-1} />

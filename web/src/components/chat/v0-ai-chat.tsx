@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, memo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { ArrowUpIcon, Loader2, Sparkles, User } from "lucide-react";
@@ -14,10 +12,77 @@ interface Message {
   content: string;
 }
 
+const MemoizedMarkdown = memo(({ content }: { content: string }) => {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
+        li: ({ children }) => <li className="mb-1">{children}</li>,
+        code: ({ children }) => (
+          <code className="bg-[#262626] px-1 py-0.5 rounded text-[10px] font-mono">
+            {children}
+          </code>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-black text-white">{children}</strong>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+});
+
+const MessageItem = memo(({ msg }: { msg: Message }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className={cn(
+        "flex w-full gap-3",
+        msg.role === "user" ? "flex-row-reverse" : "flex-row"
+      )}
+    >
+      <div
+        className={cn(
+          "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center border",
+          msg.role === "user"
+            ? "bg-[#262626] border-white/10"
+            : "bg-[#171717] border-[#262626]"
+        )}
+      >
+        {msg.role === "user" ? (
+          <User className="w-4 h-4 text-white" />
+        ) : (
+          <Sparkles className="w-4 h-4 text-white" />
+        )}
+      </div>
+      <div
+        className={cn(
+          "max-w-[85%] p-4 rounded-xl text-xs leading-relaxed shadow-sm",
+          msg.role === "user"
+            ? "bg-white text-[#0a0a0a] font-bold rounded-tr-none"
+            : "bg-[#171717] border border-[#262626] text-white rounded-tl-none prose prose-invert prose-sm max-w-none"
+        )}
+      >
+        {msg.role === "assistant" ? (
+          <MemoizedMarkdown content={msg.content} />
+        ) : (
+          msg.content
+        )}
+      </div>
+    </motion.div>
+  );
+});
+
 export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placeholder?: string }) {
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,7 +103,7 @@ export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placehol
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, streamingContent]);
 
   const handleSend = async () => {
     if (!value.trim() || isLoading) return;
@@ -56,36 +121,31 @@ export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placehol
       }));
 
       const response = await aiApi.streamChat(userMsg, history);
-
       if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
       let fullContent = "";
+      setStreamingContent("");
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
-
-        setMessages((prev) => {
-          const newMsgs = [...prev];
-          newMsgs[newMsgs.length - 1].content = fullContent;
-          return newMsgs;
-        });
+        setStreamingContent(fullContent);
       }
+
+      setMessages((prev) => [...prev, { role: "assistant", content: fullContent }]);
+      setStreamingContent(null);
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content:
-            "I'm sorry, I'm having trouble connecting right now. Please try again later.",
+          content: "I'm sorry, I'm having trouble connecting right now. Please try again later.",
         },
       ]);
     } finally {
@@ -107,18 +167,15 @@ export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placehol
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide"
       >
-        {messages.length === 0 && (
+        {messages.length === 0 && !streamingContent && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
             <div className="w-16 h-16 rounded-2xl bg-[#171717] flex items-center justify-center border border-[#262626] shadow-xl">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black tracking-tighter text-white">
-                Eco
-              </h2>
+              <h2 className="text-2xl font-black tracking-tighter text-white">Eco</h2>
               <p className="text-muted-foreground text-xs font-medium max-w-[280px]">
-                Ask me anything about movies, directors, or personalized
-                recommendations.
+                Ask me anything about movies, directors, or personalized recommendations.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2 w-full max-w-[300px]">
@@ -138,78 +195,16 @@ export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placehol
           </div>
         )}
 
-        <AnimatePresence initial={false}>
+        <div className="space-y-8">
           {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className={cn(
-                "flex w-full gap-3",
-                msg.role === "user" ? "flex-row-reverse" : "flex-row",
-              )}
-            >
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center border",
-                  msg.role === "user"
-                    ? "bg-[#262626] border-white/10"
-                    : "bg-[#171717] border-[#262626]",
-                )}
-              >
-                {msg.role === "user" ? (
-                  <User className="w-4 h-4 text-white" />
-                ) : (
-                  <Sparkles className="w-4 h-4 text-white" />
-                )}
-              </div>
-              <div
-                className={cn(
-                  "max-w-[85%] p-4 rounded-xl text-xs leading-relaxed shadow-sm",
-                  msg.role === "user"
-                    ? "bg-white text-[#0a0a0a] font-bold rounded-tr-none"
-                    : "bg-[#171717] border border-[#262626] text-white rounded-tl-none prose prose-invert prose-sm max-w-none",
-                )}
-              >
-                {msg.role === "assistant" ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ children }) => (
-                        <p className="mb-2 last:mb-0">{children}</p>
-                      ),
-                      ul: ({ children }) => (
-                        <ul className="list-disc ml-4 mb-2">{children}</ul>
-                      ),
-                      ol: ({ children }) => (
-                        <ol className="list-decimal ml-4 mb-2">{children}</ol>
-                      ),
-                      li: ({ children }) => (
-                        <li className="mb-1">{children}</li>
-                      ),
-                      code: ({ children }) => (
-                        <code className="bg-[#262626] px-1 py-0.5 rounded text-[10px] font-mono">
-                          {children}
-                        </code>
-                      ),
-                      strong: ({ children }) => (
-                        <strong className="font-black text-white">
-                          {children}
-                        </strong>
-                      ),
-                    }}
-                  >
-                    {msg.content}
-                  </ReactMarkdown>
-                ) : (
-                  msg.content
-                )}
-              </div>
-            </motion.div>
+            <MessageItem key={i} msg={msg} />
           ))}
-        </AnimatePresence>
+          {streamingContent !== null && (
+            <MessageItem msg={{ role: "assistant", content: streamingContent }} />
+          )}
+        </div>
 
-        {isLoading && (
+        {isLoading && streamingContent === null && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -253,7 +248,7 @@ export function VercelV0Chat({ placeholder = "Ask Eco anything..." }: { placehol
                 "p-2.5 rounded-xl transition-all duration-300 active:scale-95",
                 value.trim() && !isLoading
                   ? "bg-white text-[#0a0a0a] scale-105 shadow-lg shadow-white/5"
-                  : "bg-[#171717] text-muted-foreground opacity-50 cursor-not-allowed",
+                  : "bg-[#171717] text-muted-foreground opacity-50 cursor-not-allowed"
               )}
             >
               <ArrowUpIcon className="w-4 h-4" strokeWidth={4} />

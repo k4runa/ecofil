@@ -226,7 +226,7 @@ export default function Home() {
           initial={false}
           animate={{ x: isChatOpen ? 0 : "110%" }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed right-6 top-6 bottom-6 w-full sm:w-[450px] lg:w-[500px] bg-[#171717] border border-[#262626] rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
+          className="fixed inset-y-0 right-0 sm:right-6 sm:top-6 sm:bottom-6 w-full sm:max-w-[450px] lg:max-w-[500px] bg-[#171717] border-l sm:border border-[#262626] sm:rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
           style={{ pointerEvents: isChatOpen ? "auto" : "none" }}
         >
           <div className="flex items-center justify-between p-5 border-b border-[#262626]">

@@ -17,20 +17,59 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   login: async (credentials) => {
-    const res = await authApi.login(credentials);
-    const { access_token } = res.data;
-    localStorage.setItem('access_token', access_token);
-    const userRes = await authApi.getMe();
-    // getMe returns { success: true, data: { user: {...} } }
-    set({ user: userRes.data?.data?.user || userRes.data, isAuthenticated: true, isLoading: false });
+    set({ isLoading: true });
+    try {
+      const res = await authApi.login(credentials);
+      const { access_token, username, role } = res.data;
+      localStorage.setItem('access_token', access_token);
+      
+      try {
+        const userRes = await authApi.getMe();
+        set({ 
+          user: userRes.data?.data?.user || userRes.data, 
+          isAuthenticated: true, 
+          isLoading: false 
+        });
+      } catch (err) {
+        console.warn("Profile fetch failed, using login response data", err);
+        set({ 
+          user: { username, role }, 
+          isAuthenticated: true, 
+          isLoading: false 
+        });
+      }
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
+    }
   },
 
   googleLogin: async (credential) => {
-    const res = await authApi.googleLogin(credential);
-    const { access_token } = res.data;
-    localStorage.setItem('access_token', access_token);
-    const userRes = await authApi.getMe();
-    set({ user: userRes.data?.data?.user || userRes.data, isAuthenticated: true, isLoading: false });
+    set({ isLoading: true });
+    try {
+      const res = await authApi.googleLogin(credential);
+      const { access_token, username, role } = res.data;
+      localStorage.setItem('access_token', access_token);
+      
+      try {
+        const userRes = await authApi.getMe();
+        set({ 
+          user: userRes.data?.data?.user || userRes.data, 
+          isAuthenticated: true, 
+          isLoading: false 
+        });
+      } catch (err) {
+        console.warn("Profile fetch failed, using login response data", err);
+        set({ 
+          user: { username, role }, 
+          isAuthenticated: true, 
+          isLoading: false 
+        });
+      }
+    } catch (err) {
+      set({ isLoading: false });
+      throw err;
+    }
   },
 
   logout: async () => {

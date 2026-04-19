@@ -53,11 +53,15 @@ export function AuthForm() {
         const data = Object.fromEntries(formData);
         try {
             await authApi.register(data);
-            toast.success("Account created! You can now login.");
-            setMode('login');
+            toast.success("Account created! Logging you in...");
+            
+            // Auto-login after successful registration
+            await login({ 
+                username: data.username, 
+                password: data.password 
+            });
         } catch (err: any) {
             toast.error(err.response?.data?.detail || "Registration failed");
-        } finally {
             setIsLoading(false);
         }
     };
