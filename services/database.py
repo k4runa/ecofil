@@ -96,18 +96,9 @@ def init_database(db_url: str, echo: bool = False):
         poolclass = NullPool
         _engine = create_async_engine(db_url, echo=echo, poolclass=poolclass)
     else:
-        _engine = create_async_engine(
-            db_url,
-            echo=echo,
-            pool_size=5,
-            max_overflow=10,
-            pool_recycle=1800,
-            pool_pre_ping=True,
-        )
-
-    _session_maker = async_sessionmaker(
-        _engine, class_=AsyncSession, expire_on_commit=False
-    )
+        _engine = create_async_engine(db_url,echo=echo,pool_size=5,max_overflow=10,pool_recycle=1800,pool_pre_ping=True)
+    
+    _session_maker = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 # ---------------------------------------------------------------------------
