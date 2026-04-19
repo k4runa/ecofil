@@ -1,25 +1,16 @@
 #!/bin/bash
 set -e
 
-# 1. Frontend Build (Only local if npm is available, skipped in Docker)
-if command -v npm &> /dev/null && [ -d "web" ]; then
-    echo "🚀 Local environment detected. Building Next.js Frontend..."
-    cd web
-    npm install --no-audit --no-fund
-    npm run build
-    cd ..
-    mkdir -p frontend
-    rm -rf frontend/*
-    cp -r web/out/* frontend/
-    echo "✅ Frontend Build Complete!"
-else
-    echo "⚡ Skipping frontend build (Docker/Production or npm not found)."
-fi
+# start.sh — Optimized for production (512MB RAM)
+# This script runs when the container or web service starts.
 
-# 2. Update database tables to the latest version (Alembic)
+echo "🚀 Starting CineWave Production Environment..."
+
+# 1. Update database tables to the latest version (Alembic)
 echo "Running database migrations..."
 alembic upgrade head
 
-# 3. Start the application with Gunicorn (Memory-friendly settings)
-echo "Starting CineWave API..."
-exec gunicorn -w ${WEB_CONCURRENCY:-2} -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:${PORT:-8000} --access-logfile -
+# 2. Start the application with Gunicorn
+# We use a single worker for 512MB RAM environments to ensure stability.
+echo "Starting CineWave API (Gunicorn)..."
+exec gunicorn -w ${WEB_CONCURRENCY:-1} -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:${PORT:-8000} --access-logfile -
