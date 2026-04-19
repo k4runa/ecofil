@@ -16,7 +16,12 @@ The entire application (Frontend + Backend) is seamlessly unified into a single 
 
 - **Unified Full-Stack Architecture:** The Next.js frontend is statically exported and served directly by the FastAPI backend, eliminating CORS issues and simplifying deployment.
 - **Personalized AI (Eco):** A dedicated AI persona that analyzes your movie library to provide deep insights and explain why certain movies are recommended.
-- **Social Ecosystem:** Real-time **Direct Messaging** with request/accept logic, a sophisticated **Similar Minds** discovery feed, and live user presence tracking (Online/Offline).
+- **Social & Discovery Ecosystem:** 
+  - **Direct Messaging:** Real-time chat with support for message editing, deletion, and status tracking.
+  - **Interaction Requests:** A privacy-first layer where new conversations require recipient approval.
+  - **Similar Minds:** An advanced discovery algorithm that matches users based on cinematic taste percentages.
+  - **Rich User Profiles:** Public profiles showcasing users' favorite movies, genres, and real-time activity status.
+  - **Live Presence:** Integrated online/offline indicators and precise 'Last Seen' tracking.
 - **Glassmorphism UI:** A premium, state-of-the-art dashboard built with Next.js, Framer Motion, and Tailwind CSS.
 - **Robust Database Management:** Powered by PostgreSQL and SQLAlchemy 2.0 (Async), with schema versioning strictly managed by **Alembic**.
 - **Multi-Stage Docker Pipeline:** A highly optimized Docker build that securely compiles the Node.js frontend and packages it into a lightweight Python container.
