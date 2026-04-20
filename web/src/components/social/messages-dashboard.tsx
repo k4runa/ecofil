@@ -342,7 +342,7 @@ export const MessagesDashboard = () => {
                     ) : "No messages yet"}
                   </p>
                 </div>
-              </button>
+              </div>
             ))
           )}
         </div>
