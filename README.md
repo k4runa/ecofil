@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/Docker-Multi--Stage-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
 </p>
 
-CineWave is a high-performance, asynchronous movie tracking and recommendation platform. It features a stunning **Next.js** dashboard with a Glassmorphism design and is powered by **Eco**, a personalized AI assistant that understands your cinematic taste.
+CineWave is a high-performance, asynchronous movie tracking and recommendation platform. It features a stunning **Next.js** dashboard with a minimalist Deep Black industrial-grade design and is powered by **Eco**, a personalized AI assistant that understands your cinematic taste.
 
 ---
 
