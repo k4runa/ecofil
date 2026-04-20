@@ -30,6 +30,7 @@ DUMMY_HASH = bcrypt.hashpw(b"dummy_password", bcrypt.gensalt()).decode("utf-8")
 @router.post("/login")
 @limiter.limit("5/minute")
 async def login(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    logger.info(f"LOGIN ATTEMPT: Username '{form_data.username}'")
     """
     Authenticate a user and return a JWT access token.
 
@@ -52,6 +53,7 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
     is_valid                =   await verify_password(form_data.password, hashed)
 
     if not user_in_db or not is_valid:
+        logger.warning(f"LOGIN FAILED: Invalid credentials for username '{form_data.username}'")
         raise HTTPException(status_code=401, detail="Incorrect username or password")
 
     access_token            =   create_access_token(data={"sub": user_in_db["username"]})
@@ -66,6 +68,7 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
+    logger.info(f"LOGIN SUCCESS: User '{user_in_db['username']}' authenticated")
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -104,6 +107,7 @@ async def google_login(response: Response, request: Request, body: GoogleLoginRe
     access_token = create_access_token(data={"sub": user_in_db["username"]})
     # Fix 8.1: Set httpOnly cookie
     response.set_cookie(key="access_token",value=access_token,httponly=True,secure=True,samesite="lax",max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    logger.info(f"GOOGLE LOGIN SUCCESS: User '{user_in_db['username']}' authenticated")
     return {
         "access_token": access_token,
         "token_type": "bearer",
