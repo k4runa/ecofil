@@ -68,9 +68,10 @@ export const MessagesDashboard = () => {
     return () => window.removeEventListener('click', handleClick);
   }, []);
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (statusOverride?: "ACCEPTED" | "PENDING") => {
+    const targetStatus = statusOverride || activeStatus;
     try {
-      const res = await socialApi.getConversations(activeStatus);
+      const res = await socialApi.getConversations(targetStatus);
       const convs = res.data?.data?.conversations || [];
       setConversations(convs);
       
@@ -79,7 +80,7 @@ export const MessagesDashboard = () => {
       setUnreadTotal(total);
 
       // Check for requests if we are in inbox
-      if (activeStatus === "ACCEPTED") {
+      if (targetStatus === "ACCEPTED") {
         const reqRes = await socialApi.getConversations("PENDING");
         setRequestCount(reqRes.data?.data?.conversations?.length || 0);
       }
@@ -113,9 +114,9 @@ export const MessagesDashboard = () => {
   };
 
   useEffect(() => {
-    fetchConversations();
+    fetchConversations(activeStatus);
     // Poll for new messages/requests every 10 seconds
-    const interval = setInterval(fetchConversations, 10000);
+    const interval = setInterval(() => fetchConversations(activeStatus), 10000);
     return () => clearInterval(interval);
   }, [activeStatus]);
 
@@ -187,9 +188,12 @@ export const MessagesDashboard = () => {
     try {
       await socialApi.handleRequest(otherId, action);
       toast.success(action === "accept" ? "Request accepted" : "Request declined");
-      setActiveStatus("ACCEPTED");
       setActiveChatId(action === "accept" ? otherId : null);
-      fetchConversations();
+      if (action === "accept") {
+        setActiveStatus("ACCEPTED"); // The useEffect will handle fetchConversations
+      } else {
+        fetchConversations("PENDING");
+      }
     } catch (err) {
       toast.error("Failed to handle request");
     }
@@ -502,7 +506,7 @@ export const MessagesDashboard = () => {
               </div>
             ) : (
               <div className="p-6 border-t border-border bg-card/50 backdrop-blur-md">
-                {selectedConv?.status === "PENDING" && (
+                {(selectedConv?.status === "PENDING" || selectedConv?.status === "PENDING_SENT") && (
                   <div className="mb-4 text-center">
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
                       Waiting for acceptance...
@@ -513,19 +517,19 @@ export const MessagesDashboard = () => {
                   <div className="flex-1 relative">
                     <input
                       type="text"
-                      placeholder={selectedConv?.status === "PENDING" ? "You must be accepted to send more..." : "Write a message..."}
+                      placeholder={(selectedConv?.status === "PENDING" || selectedConv?.status === "PENDING_SENT") ? "You must be accepted to send more..." : "Write a message..."}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      disabled={selectedConv?.status === "PENDING"}
+                      disabled={selectedConv?.status === "PENDING" || selectedConv?.status === "PENDING_SENT"}
                       className="w-full bg-background border border-border rounded-2xl px-5 py-3.5 text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner disabled:opacity-50"
                     />
                   </div>
                   <button
                     type="submit"
-                    disabled={!newMessage.trim() || sending || selectedConv?.status === "PENDING"}
+                    disabled={!newMessage.trim() || sending || selectedConv?.status === "PENDING" || selectedConv?.status === "PENDING_SENT"}
                     className={cn(
                       "size-12 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-95",
-                      newMessage.trim() && selectedConv?.status !== "PENDING"
+                      newMessage.trim() && selectedConv?.status !== "PENDING" && selectedConv?.status !== "PENDING_SENT"
                         ? "bg-primary text-primary-foreground shadow-primary/20 hover:scale-105" 
                         : "bg-accent text-muted-foreground grayscale cursor-not-allowed"
                     )}

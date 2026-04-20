@@ -28,8 +28,8 @@ from sqlalchemy import (
     func,
     UniqueConstraint,
 )
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, AsyncSessionMaker
 from fastapi.concurrency import run_in_threadpool
 from functools import wraps
 from typing import List, Optional, Any
@@ -75,7 +75,6 @@ logger = logging.getLogger(__name__)
 
 class Base(DeclarativeBase):
     """Declarative base class for all ORM models."""
-
     pass
 
 
@@ -85,8 +84,8 @@ class Base(DeclarativeBase):
 # We define a single engine and session factory to be shared across all
 # managers. This is critical for performance and memory management.
 # ---------------------------------------------------------------------------
-_engine = None
-_session_maker = None
+_engine:        AsyncEngine         = None
+_session_maker: AsyncSessionMaker   = None
 
 
 def init_database(db_url: str, echo: bool = False):
@@ -101,7 +100,6 @@ def init_database(db_url: str, echo: bool = False):
         _engine = create_async_engine(db_url, echo=echo, poolclass=poolclass)
     else:
         _engine = create_async_engine(db_url,echo=echo,pool_size=5,max_overflow=10,pool_recycle=1800,pool_pre_ping=True)
-    
     _session_maker = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
 
 
@@ -119,7 +117,6 @@ class UserAlreadyExists(Exception):
     def __init__(self, username: str, *args: object) -> None:
         super().__init__(f"User {username} already exists - args=({args})")
 
-
 class ReservedUsernameError(Exception):
     """Raised when attempting to register a restricted username (e.g. admin)."""
 
@@ -133,13 +130,11 @@ class UserNotFoundError(Exception):
     def __init__(self, username: str, *args: object) -> None:
         super().__init__(f"User {username} not found - args=({args})")
 
-
 class MovieAlreadyExists(Exception):
     """Raised when a movie is already in the user's tracked collection."""
 
     def __init__(self, title: str, *args: object) -> None:
         super().__init__(f"Movie {title} already exists - args=({args})")
-
 
 class MovieNotFoundError(Exception):
     """Raised when a movie is not found in the user's tracked collection."""
@@ -211,9 +206,9 @@ class User(Base):
     last_seen:                      Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
     # --- Relationships ---
-    movies:                         Mapped[List["Movies"]]  =   relationship("Movies", back_populates="user", lazy="selectin")
-    sent_messages:                  Mapped[List["Message"]] =   relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
-    received_messages:              Mapped[List["Message"]] =   relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
+    movies:                         Mapped[List["Movies"]]   = relationship("Movies", back_populates="user", lazy="selectin")
+    sent_messages:                  Mapped[List["Message"]]  = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    received_messages:              Mapped[List["Message"]]  = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
     conversations:                  Mapped[List["Conversation"]] = relationship("Conversation", primaryjoin="or_(User.id==Conversation.user1_id, User.id==Conversation.user2_id)", viewonly=True)
 
 
@@ -285,8 +280,8 @@ class Message(Base):
     is_read:            Mapped[bool]                =   mapped_column(Boolean, default=False)
     message_type:       Mapped[str]                 =   mapped_column(String, default="text", server_default="text") # text, image, movie_recommendation
     attachment_url:     Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
-    deleted_by_sender:   Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
-    deleted_by_receiver: Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
+    deleted_by_sender:   Mapped[bool]               =   mapped_column(Boolean, default=False, server_default="false")
+    deleted_by_receiver: Mapped[bool]               =   mapped_column(Boolean, default=False, server_default="false")
     is_edited:          Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
     edited_at:          Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
     created_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
@@ -1229,10 +1224,13 @@ class SocialManager:
     async def get_messages(self, session: AsyncSession, user_a: int, user_b: int) -> List[dict]:
         """
         Fetch full message history between two users, excluding deleted ones.
+        Filters from user_a's perspective: hide messages user_a deleted as sender or receiver.
         """
         stmt = select(Message).where(
             or_(
+                # Messages I sent to them — hide if I deleted them
                 and_(Message.sender_id == user_a, Message.receiver_id == user_b, Message.deleted_by_sender == False),
+                # Messages they sent to me — hide if I deleted them
                 and_(Message.sender_id == user_b, Message.receiver_id == user_a, Message.deleted_by_receiver == False)
             )
         ).order_by(Message.created_at.asc())
@@ -1260,20 +1258,21 @@ class SocialManager:
     async def get_conversations(self, session: AsyncSession, user_id: int, status: str = "ACCEPTED") -> List[dict]:
         """
         Get all conversations for a user with specific status.
-        ACCEPTED: Normal inbox.
+        ACCEPTED: Normal inbox (includes sender's PENDING conversations as PENDING_SENT).
         PENDING: Message requests (only where current user is receiver of first message).
         """
-        # Get conversations from the new table
-        stmt = select(Conversation).where(
-            or_(Conversation.user1_id == user_id, Conversation.user2_id == user_id),
-            Conversation.status == status
-        )
-        
-        # For PENDING, we only want to show it to the receiver of the conversation
-        # However, 'PENDING' usually means 'I haven't accepted yet'.
-        # If I sent the first message, I see it as 'Pending' in my sent list? 
-        # Usually, sender sees it in normal list but labeled as 'Sent Request'.
-        # Let's simplify: PENDING is for the receiver.
+        if status == "ACCEPTED":
+            # For ACCEPTED view: show accepted convos AND pending convos where I am the sender
+            stmt = select(Conversation).where(
+                or_(Conversation.user1_id == user_id, Conversation.user2_id == user_id),
+                or_(Conversation.status == "ACCEPTED", Conversation.status == "PENDING")
+            )
+        else:
+            # For PENDING view: show pending convos (receiver will be filtered below)
+            stmt = select(Conversation).where(
+                or_(Conversation.user1_id == user_id, Conversation.user2_id == user_id),
+                Conversation.status == "PENDING"
+            )
         
         res = await session.execute(stmt)
         convs = res.scalars().all()
@@ -1282,20 +1281,27 @@ class SocialManager:
         for c in convs:
             other_id = c.user2_id if c.user1_id == user_id else c.user1_id
             
-            # For PENDING, we only want to show it to the receiver of the conversation request
-            if status == "PENDING":
-                # Find the very first message in this conversation
-                stmt = select(Message).where(
+            # Determine if I am the sender or receiver of this conversation request
+            is_sender_of_request = False
+            if c.status == "PENDING":
+                first_msg_stmt = select(Message).where(
                     or_(
                         and_(Message.sender_id == user_id, Message.receiver_id == other_id),
                         and_(Message.sender_id == other_id, Message.receiver_id == user_id)
                     )
                 ).order_by(Message.created_at.asc()).limit(1)
-                first_msg_res = await session.execute(stmt)
+                first_msg_res = await session.execute(first_msg_stmt)
                 first_msg = first_msg_res.scalar()
                 
-                # If I was the sender of the very first message, it's not a request for me.
-                if first_msg and first_msg.sender_id == user_id:
+                if first_msg:
+                    is_sender_of_request = (first_msg.sender_id == user_id)
+                
+                # For PENDING tab: skip if I am the sender (I shouldn't see my own requests here)
+                if status == "PENDING" and is_sender_of_request:
+                    continue
+                
+                # For ACCEPTED tab: skip if I am the receiver (they should see it in PENDING tab)
+                if status == "ACCEPTED" and not is_sender_of_request:
                     continue
 
             # Get last message
@@ -1328,6 +1334,11 @@ class SocialManager:
             
             if not participant: continue
             
+            # Determine the display status
+            display_status = c.status
+            if c.status == "PENDING" and is_sender_of_request:
+                display_status = "PENDING_SENT"
+            
             results.append({
                 "participant": {
                     "id": participant.id,
@@ -1337,7 +1348,7 @@ class SocialManager:
                     "bio": participant.bio if participant.show_bio else None,
                     "last_seen": participant.last_seen
                 },
-                "status": c.status,
+                "status": display_status,
                 "last_message": {
                     "id": last_msg.id,
                     "sender_id": last_msg.sender_id,
