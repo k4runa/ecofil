@@ -7,6 +7,7 @@ Endpoints:
     POST /login  — Authenticate with username + password, receive a JWT.
 """
 
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from services.auth import verify_password, create_access_token
@@ -20,6 +21,7 @@ from datetime import datetime, timezone
 
 
 router = APIRouter(tags=["auth"])
+logger = logging.getLogger(__name__)
 
 # Pre-computed dummy hash to prevent timing attacks
 DUMMY_HASH = bcrypt.hashpw(b"dummy_password", bcrypt.gensalt()).decode("utf-8")
