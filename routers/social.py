@@ -119,7 +119,7 @@ async def delete_message(
 
 
 @router.get("/conversations", response_model=dict)
-@limiter.limit("20/minute")
+@limiter.limit("100/minute")
 async def get_conversations(
     request: Request,
     status: str = "ACCEPTED",
@@ -166,7 +166,7 @@ async def handle_message_request(
 
 
 @router.get("/messages/{other_user_id}", response_model=dict)
-@limiter.limit("30/minute")
+@limiter.limit("100/minute")
 async def get_message_history(
     request: Request,
     other_user_id: int,

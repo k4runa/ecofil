@@ -72,17 +72,21 @@ export const MessagesDashboard = () => {
     const targetStatus = statusOverride || activeStatus;
     try {
       const res = await socialApi.getConversations(targetStatus);
-      const convs = res.data?.data?.conversations || [];
-      setConversations(convs);
       
-      // Calculate total unread
-      const total = convs.reduce((acc: number, curr: any) => acc + curr.unread_count, 0);
-      setUnreadTotal(total);
+      // Safety: only update state if we are still looking at the same status
+      if (targetStatus === activeStatus || statusOverride) {
+        const convs = res.data?.data?.conversations || [];
+        setConversations(convs);
+        
+        // Calculate total unread
+        const total = convs.reduce((acc: number, curr: any) => acc + curr.unread_count, 0);
+        setUnreadTotal(total);
 
-      // Check for requests if we are in inbox
-      if (targetStatus === "ACCEPTED") {
-        const reqRes = await socialApi.getConversations("PENDING");
-        setRequestCount(reqRes.data?.data?.conversations?.length || 0);
+        // Check for requests if we are in inbox
+        if (targetStatus === "ACCEPTED") {
+          const reqRes = await socialApi.getConversations("PENDING");
+          setRequestCount(reqRes.data?.data?.conversations?.length || 0);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch conversations", err);
@@ -237,7 +241,11 @@ export const MessagesDashboard = () => {
           {/* Status Tabs */}
           <div className="flex bg-accent/50 p-1 rounded-2xl">
             <button 
-              onClick={() => { setActiveStatus("ACCEPTED"); setActiveChatId(null); }}
+              onClick={() => { 
+                setActiveStatus("ACCEPTED"); 
+                setActiveChatId(null);
+                setConversations([]);
+              }}
               className={cn(
                 "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
                 activeStatus === "ACCEPTED" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -246,7 +254,11 @@ export const MessagesDashboard = () => {
               Inbox
             </button>
             <button 
-              onClick={() => { setActiveStatus("PENDING"); setActiveChatId(null); }}
+              onClick={() => { 
+                setActiveStatus("PENDING"); 
+                setActiveChatId(null);
+                setConversations([]);
+              }}
               className={cn(
                 "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all relative",
                 activeStatus === "PENDING" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
