@@ -115,7 +115,7 @@ export function MovieDashboard() {
                   <img
                     src={movie.poster_url || `https://images.placeholders.dev/?width=500&height=750&text=${encodeURIComponent(movie.title)}&bgColor=%2318181b&textColor=%2371717a`}
                     alt={movie.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover transition-transform duration-700"
                   />
                   <div className="absolute top-3 left-3 flex gap-2">
                     <button

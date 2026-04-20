@@ -91,7 +91,8 @@ export const MessagesDashboard = () => {
     } catch (err) {
       console.error("Failed to fetch conversations", err);
     } finally {
-      setLoading(false);
+      // Only disable first-load spinner
+      if (loading) setLoading(false);
     }
   };
 
@@ -242,9 +243,11 @@ export const MessagesDashboard = () => {
           <div className="flex border-b border-border gap-6 px-2">
             <button
               onClick={() => {
+                if (activeStatus === "ACCEPTED") return;
                 setActiveStatus("ACCEPTED");
                 setActiveChatId(null);
                 setConversations([]);
+                setLoading(true); // Trigger spinner for clean state on explicit switch
               }}
               className={cn(
                 "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
@@ -256,9 +259,11 @@ export const MessagesDashboard = () => {
             </button>
             <button
               onClick={() => {
+                if (activeStatus === "PENDING") return;
                 setActiveStatus("PENDING");
                 setActiveChatId(null);
                 setConversations([]);
+                setLoading(true);
               }}
               className={cn(
                 "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",

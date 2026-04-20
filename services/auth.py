@@ -80,11 +80,11 @@ async def verify_google_token(token: str) -> dict | None:
         logger.warning(f"ID token verification failed - error: {str(exc)}")
 
     try:
-        async with httpx.AsyncClient(timeout=0.5) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get("https://oauth2.googleapis.com/tokeninfo",params={"access_token": token})
-            if response.status_code == 200:
+            if response.status_code == 200: #if the client id is not matched it will return 400. So this check is only for the expiry time of the token.
                 data = response.json()
-                if data.get("aut") != GOOGLE_CLIENT_ID:
+                if data.get("aud") != GOOGLE_CLIENT_ID and data.get("issued_to") != GOOGLE_CLIENT_ID:
                     return None
                 return data
     except Exception as exc:

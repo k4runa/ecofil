@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Film,
   Compass,
@@ -172,7 +172,12 @@ const TitleSection = ({ open, user }: any) => {
 };
 
 const Logo = ({ user }: any) => {
-  const hasAvatar = !!user?.avatar_url;
+  const [imgError, setImgError] = useState(false);
+  const hasAvatar = !!user?.avatar_url && !imgError;
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.avatar_url]);
 
   return (
     <div className={cn(
@@ -182,8 +187,12 @@ const Logo = ({ user }: any) => {
       {hasAvatar ? (
         <img
           src={getFullUrl(user.avatar_url)}
-          alt="Logo"
+          alt={`${user?.username || 'User'}'s profile`}
           className="w-full h-full object-cover block"
+          onError={() => {
+            console.warn(`Sidebar avatar failed to load for ${user?.username}`);
+            setImgError(true);
+          }}
         />
       ) : (
         <Film className="w-5 h-5 text-background" strokeWidth={3} />

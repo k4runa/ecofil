@@ -7,617 +7,415 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Loader2, 
-  User, 
-  Palette, 
-  Sparkles, 
-  Bell, 
-  Moon, 
-  Sun, 
-  Camera, 
-  Shield, 
-  Fingerprint, 
-  Globe, 
+import {
+  User,
   Mail,
+  Lock,
+  Camera,
+  Loader2,
+  Globe,
   Smartphone,
   Server,
-  Check
+  Fingerprint,
+  Palette,
+  Moon,
+  Sun,
+  Sparkles,
+  Shield,
+  Edit3,
+  Check,
+  ChevronRight,
+  ShieldCheck,
+  LayoutGrid,
+  X,
+  Link as LinkIcon,
+  MapPin,
+  Calendar,
+  Users,
+  AlertCircle
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
+/**
+ * SettingsDashboard - A clean, tabbed settings interface.
+ * Simplified language for better usability while maintaining premium aesthetics.
+ */
 export function SettingsDashboard() {
   const { user, checkAuth } = useAuthStore();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'privacy' | 'security'>('profile');
   
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [aiEnabled, setAiEnabled] = useState(user?.ai_enabled ?? true);
-  const [toastLimit, setToastLimit] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('toastLimit') || "3";
-    }
-    return "3";
-  });
   const [isUploading, setIsUploading] = useState(false);
-  
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const [profileValues, setProfileValues] = useState({
+    username: user?.username || "",
     nickname: user?.nickname || "",
     bio: user?.bio || "",
     gender: user?.gender || "",
     age: user?.age?.toString() || "",
-    location: user?.location || ""
+    location: user?.location || "",
+    social_link: user?.social_link || ""
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const [aiEnabled, setAiEnabled] = useState(user?.ai_enabled ?? true);
+
+  useEffect(() => {
+    setMounted(true);
+    setAiEnabled(user?.ai_enabled ?? true);
+    setImgError(false);
+    if (user) {
+      setProfileValues({
+        username: user.username || "",
+        nickname: user.nickname || "",
+        bio: user.bio || "",
+        gender: user.gender || "",
+        age: user.age?.toString() || "",
+        location: user.location || "",
+        social_link: user.social_link || ""
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const newErrors: Record<string, string> = {};
+    if (profileValues.age) {
+      const ageNum = parseInt(profileValues.age);
+      if (isNaN(ageNum) || ageNum < 13) newErrors.age = "Minimum age is 13";
+      else if (ageNum > 120) newErrors.age = "Invalid age";
+    }
+    if (!profileValues.username) newErrors.username = "Required";
+    else if (profileValues.username.length < 3) newErrors.username = "Too short";
+    if (profileValues.nickname && profileValues.nickname.length > 50) newErrors.nickname = "Too long";
+    setErrors(newErrors);
+  }, [profileValues]);
+
+  if (!mounted) return null;
+
+  const handleUpdateProfile = async () => {
+    if (Object.keys(errors).length > 0) return;
+    setIsSubmitting(true);
+    try {
+      await authApi.updateProfile({
+        username: profileValues.username,
+        nickname: profileValues.nickname,
+        bio: profileValues.bio,
+        gender: profileValues.gender,
+        age: profileValues.age ? parseInt(profileValues.age) : null,
+        location: profileValues.location,
+        social_link: profileValues.social_link
+      });
+      await checkAuth(true);
+      toast.success("Profile updated");
+      setIsEditModalOpen(false);
+    } catch (err: any) {
+      const msg = err.response?.data?.detail;
+      toast.error(Array.isArray(msg) ? msg[0]?.msg : (msg || "Error updating profile"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append("file", file);
-
     setIsUploading(true);
     try {
-      await authApi.uploadAvatar(formData);
+      const res = await authApi.uploadAvatar(formData);
+      if (res.data.avatar_url) {
+        setImgError(false);
+        useAuthStore.getState().updateUser({ avatar_url: res.data.avatar_url });
+      }
       await checkAuth(true);
-      toast.success("Profile picture updated!");
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Upload failed");
+      toast.success("Avatar updated");
+    } catch (err) {
+      toast.error("Upload failed");
     } finally {
       setIsUploading(false);
     }
   };
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const NavButton = ({ id, label, icon: Icon }: { id: any, label: string, icon: any }) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={cn(
+        "flex items-center gap-3 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] transition-all relative group",
+        activeTab === id 
+          ? "bg-[#101010] text-primary border border-[#1a1a1a] shadow-lg" 
+          : "text-muted-foreground hover:text-foreground hover:bg-[#101010]/50"
+      )}
+    >
+      <Icon className={cn("size-3.5", activeTab === id ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+      {label}
+      {activeTab === id && (
+        <motion.div layoutId="activeTab" className="absolute left-0 w-1 h-4 bg-primary rounded-full" />
+      )}
+    </button>
+  );
 
-  useEffect(() => {
-    if (user) {
-      setProfileValues({
-        nickname: user.nickname || "",
-        bio: user.bio || "",
-        gender: user.gender || "",
-        age: user.age?.toString() || "",
-        location: user.location || ""
-      });
-    }
-  }, [user]);
+  const SectionBox = ({ children, title, sub }: { children: React.ReactNode, title: string, sub: string }) => (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+      <div className="px-1">
+        <h2 className="text-xl font-black tracking-tighter text-white">{title}</h2>
+        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">{sub}</p>
+      </div>
+      <div className="bg-[#101010] border border-[#1a1a1a] rounded-2xl p-6 shadow-2xl backdrop-blur-sm">
+        {children}
+      </div>
+    </motion.div>
+  );
 
-  const handleUpdateProfile = async () => {
-    setIsSubmitting(true);
-    try {
-      await authApi.updateProfile({
-        nickname: profileValues.nickname,
-        bio: profileValues.bio,
-        gender: profileValues.gender,
-        age: profileValues.age ? parseInt(profileValues.age) : null,
-        location: profileValues.location
-      });
-      await checkAuth(true);
-      toast.success("Profile updated successfully!");
-      setIsEditingProfile(false);
-    } catch (err: any) {
-      toast.error("Failed to update profile");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleUpdateUsername = async () => {
-    if (!newUsername || !currentPassword) {
-      toast.error("Please provide new username and current password");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const res = await authApi.updateUserField({
-        field: "username",
-        value: newUsername,
-        current_password: currentPassword
-      });
-      if (res.data.new_token) {
-        localStorage.setItem("access_token", res.data.new_token);
-        await checkAuth(true);
-        toast.success("Username updated successfully!");
-        setIsEditingUsername(false);
-        setNewUsername("");
-        setCurrentPassword("");
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to update username");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleToggleAi = async () => {
-    const newValue = !aiEnabled;
-    setAiEnabled(newValue);
-    try {
-      await authApi.updateUserField({
-        field: "ai_enabled",
-        value: newValue
-      });
-      await checkAuth(true); // Sync the global store so the state persists across tab changes
-      toast.success(newValue ? "AI Features Enabled" : "AI Features Disabled");
-    } catch (err: any) {
-      setAiEnabled(!newValue); // revert
-      toast.error("Failed to update AI preference");
-    }
-  };
-
-  const handleToastLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const limit = e.target.value;
-    setToastLimit(limit);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('toastLimit', limit);
-      toast.success(`Max notifications set to ${limit}`);
-    }
-  };
-
-  if (!mounted) return null;
+  const inputBaseStyles = "h-12 bg-[#101010] border-[#1a1a1a] pl-11 font-bold transition-all focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary/50 outline-none";
+  const errorStyles = "border-red-500/50 bg-red-500/5 focus:border-red-500 focus:bg-red-500/10";
 
   return (
-    <div className="bg-transparent space-y-8 max-w-4xl mx-auto">
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <User className="w-4 h-4 text-foreground/70" />
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Profile Management</label>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-6 p-4 sm:p-6 bg-card rounded-xl border border-border shadow-sm group transition-all items-center sm:items-start text-center sm:text-left">
-          <div className="relative group/avatar">
-            <div className="size-20 sm:size-24 rounded-[2rem] bg-gradient-to-br from-primary to-primary-foreground flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-xl overflow-hidden border-2 border-border">
-              {user?.avatar_url ? (
-                <img src={getFullUrl(user.avatar_url)} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                user?.username?.[0]?.toUpperCase()
-              )}
-              
-              {isUploading && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-white" />
-                </div>
-              )}
-            </div>
-            
-            <label className="absolute -bottom-1 -right-1 size-8 bg-card border border-border rounded-xl flex items-center justify-center cursor-pointer shadow-lg hover:bg-accent transition-colors group-hover/avatar:scale-110 active:scale-95">
-              <Camera className="w-3.5 h-3.5 text-foreground" />
-              <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
-            </label>
-          </div>
+    <div className="bg-transparent max-w-5xl mx-auto px-4 py-8 relative">
+      <style jsx global>{`
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        .settings-input:focus-visible { outline: none !important; ring: 0 !important; box-shadow: none !important; }
+      `}</style>
 
-          <div className="flex-1 w-full flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4">
-            <div className="space-y-1">
-              <p className="font-bold text-xl sm:text-2xl tracking-tight text-foreground">{user?.username}</p>
-              <p className="text-xs text-muted-foreground font-medium">Public Account Identity</p>
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button 
-                variant="outline" 
-                className="w-full sm:w-auto rounded-lg px-4 font-bold text-[10px] uppercase tracking-widest transition-all h-8 border-border hover:bg-accent text-foreground"
-                onClick={() => setIsEditingUsername(!isEditingUsername)}
-              >
-                {isEditingUsername ? "Cancel" : "Change Username"}
-              </Button>
-            </div>
-          </div>
-        </div>
-          
-          {isEditingUsername && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="pt-6 border-t border-border space-y-4"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.15em] ml-1">New Username</Label>
-                  <input 
-                    type="text" 
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
-                    className="w-full h-10 bg-accent border border-transparent rounded-lg px-3 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all font-medium"
-                    placeholder="Enter new username"
-                  />
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsEditModalOpen(false)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl bg-[#0a0a0a] border border-[#1a1a1a] rounded-[2.5rem] shadow-2xl overflow-hidden">
+              <div className="p-8 space-y-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tighter text-white">Edit Profile</h2>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Update your profile information</p>
+                  </div>
+                  <button onClick={() => setIsEditModalOpen(false)} className="size-10 rounded-full bg-[#101010] border border-[#1a1a1a] flex items-center justify-center hover:bg-[#1a1a1a] transition-colors"><X className="size-5 text-muted-foreground" /></button>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.15em] ml-1">Current Password</Label>
-                  <input 
-                    type="password" 
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full h-10 bg-accent border border-transparent rounded-lg px-3 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all font-medium"
-                    placeholder="••••••••"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Username</Label>
+                      <div className="relative group">
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input value={profileValues.username} onChange={e => setProfileValues({...profileValues, username: e.target.value})} className={cn(inputBaseStyles, "settings-input", errors.username && errorStyles)} />
+                      </div>
+                      {errors.username && <p className="text-[9px] text-red-500 font-bold uppercase ml-1 flex items-center gap-1"><AlertCircle className="size-2.5" /> {errors.username}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Nickname</Label>
+                      <div className="relative group">
+                        <Sparkles className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input value={profileValues.nickname} onChange={e => setProfileValues({...profileValues, nickname: e.target.value})} placeholder="Display Name" className={cn(inputBaseStyles, "settings-input", errors.nickname && errorStyles)} />
+                      </div>
+                      {errors.nickname && <p className="text-[9px] text-red-500 font-bold uppercase ml-1 flex items-center gap-1"><AlertCircle className="size-2.5" /> {errors.nickname}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Age</Label>
+                        <div className="relative group">
+                          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Input type="number" value={profileValues.age} onChange={e => setProfileValues({...profileValues, age: e.target.value})} placeholder="25" className={cn(inputBaseStyles, "settings-input appearance-none", errors.age && errorStyles)} />
+                        </div>
+                        {errors.age && <p className="text-[9px] text-red-500 font-bold uppercase ml-1 flex items-center gap-1"><AlertCircle className="size-2.5" /> {errors.age}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Gender</Label>
+                        <div className="relative group">
+                          <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Input value={profileValues.gender} onChange={e => setProfileValues({...profileValues, gender: e.target.value})} placeholder="Gender" className={cn(inputBaseStyles, "settings-input")} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Location</Label>
+                      <div className="relative group">
+                        <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input value={profileValues.location} onChange={e => setProfileValues({...profileValues, location: e.target.value})} placeholder="City, Country" className={cn(inputBaseStyles, "settings-input")} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Social Link</Label>
+                      <div className="relative group">
+                        <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input value={profileValues.social_link} onChange={e => setProfileValues({...profileValues, social_link: e.target.value})} placeholder="Link to profile" className={cn(inputBaseStyles, "settings-input")} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Bio</Label>
+                      <textarea value={profileValues.bio} onChange={e => setProfileValues({...profileValues, bio: e.target.value})} placeholder="Short bio..." className="w-full h-28 bg-[#101010] border border-[#1a1a1a] rounded-xl p-4 text-xs focus:outline-none focus:border-primary/50 resize-none font-medium transition-all" />
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-4 flex items-center justify-between gap-4 border-t border-[#1a1a1a]">
+                  <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest max-w-[200px]">Profile changes are saved to your account.</p>
+                  <div className="flex gap-3">
+                    <Button onClick={() => setIsEditModalOpen(false)} variant="ghost" className="h-11 px-6 text-[11px] font-black uppercase tracking-widest hover:bg-[#101010]">Cancel</Button>
+                    <Button onClick={handleUpdateProfile} disabled={isSubmitting || Object.keys(errors).length > 0} className={cn("h-11 px-8 text-[11px] font-black uppercase tracking-widest transition-all", Object.keys(errors).length > 0 ? "bg-red-500/10 text-red-500 border border-red-500/20 cursor-not-allowed" : "bg-white text-black hover:bg-zinc-200")}>
+                      {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Save Changes"}
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <Button 
-                onClick={handleUpdateUsername} 
-                disabled={isSubmitting || !newUsername || !currentPassword}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-10 font-black text-[10px] uppercase tracking-widest transition-all"
-              >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Commit Changes"}
-              </Button>
             </motion.div>
-          )}
+          </div>
+        )}
+      </AnimatePresence>
 
-          <div className="pt-6 border-t border-border space-y-8">
-            <div className="flex items-center justify-between px-1">
-              <div className="space-y-0.5">
-                <h4 className="text-sm font-bold tracking-tight text-foreground">Identity Details</h4>
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Public Persona & Biography</p>
-              </div>
-              {!isEditingProfile && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setIsEditingProfile(true)}
-                  className="h-8 px-4 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 rounded-lg transition-all"
-                >
-                  Edit Profile
-                </Button>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-              <div className="lg:col-span-7 space-y-6">
-                {/* Nickname & Bio Field */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-foreground ml-0.5">Display Name (Nickname)</Label>
-                    {isEditingProfile ? (
-                      <input 
-                        type="text" 
-                        value={profileValues.nickname}
-                        onChange={(e) => setProfileValues({...profileValues, nickname: e.target.value})}
-                        className="w-full h-11 bg-accent/50 border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                        placeholder="e.g. CinemaLover"
-                      />
-                    ) : (
-                      <div className="w-full h-11 bg-accent/20 border border-border/50 rounded-xl px-4 flex items-center text-sm text-foreground/80 font-medium">
-                        {user?.nickname || user?.username}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-foreground ml-0.5">Biography</Label>
-                    {isEditingProfile ? (
-                      <textarea 
-                        value={profileValues.bio}
-                        onChange={(e) => setProfileValues({...profileValues, bio: e.target.value})}
-                        className="w-full min-h-[120px] bg-accent/50 border border-border rounded-xl p-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium resize-none"
-                        placeholder="Tell us about your cinematic journey..."
-                      />
-                    ) : (
-                      <div className="w-full min-h-[60px] bg-accent/20 border border-border/50 rounded-xl px-4 py-3 text-sm text-foreground/80 font-medium leading-relaxed italic">
-                        {user?.bio || "No biography provided yet."}
-                      </div>
-                    )}
-                    <p className="text-[10px] text-muted-foreground/60 font-medium ml-1 uppercase tracking-wider">Visible to other cinephiles</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-foreground ml-0.5">Location</Label>
-                    {isEditingProfile ? (
-                      <input 
-                        type="text" 
-                        value={profileValues.location}
-                        onChange={(e) => setProfileValues({...profileValues, location: e.target.value})}
-                        className="w-full h-11 bg-accent/50 border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                        placeholder="e.g. Istanbul, TR"
-                      />
-                    ) : (
-                      <div className="w-full h-11 bg-accent/20 border border-border/50 rounded-xl px-4 flex items-center text-sm text-foreground/80 font-medium">
-                        {user?.location || "Unknown Node"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-foreground ml-0.5">Age</Label>
-                      {isEditingProfile ? (
-                        <input 
-                          type="number" 
-                          value={profileValues.age}
-                          onChange={(e) => setProfileValues({...profileValues, age: e.target.value})}
-                          className="w-full h-11 bg-accent/50 border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                          placeholder="25"
-                        />
-                      ) : (
-                        <div className="w-full h-11 bg-accent/20 border border-border/50 rounded-xl px-4 flex items-center text-sm text-foreground/80 font-medium">
-                          {user?.age || "Secret"}
-                        </div>
-                      )}
+      <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
+        <div className="w-full md:w-64 shrink-0">
+          <div className="flex flex-col gap-1.5 sticky top-8">
+            <NavButton id="profile" label="Profile" icon={User} />
+            <NavButton id="preferences" label="Settings" icon={LayoutGrid} />
+            <NavButton id="privacy" label="Privacy" icon={Shield} />
+            <NavButton id="security" label="Security" icon={ShieldCheck} />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <AnimatePresence mode="wait">
+            {activeTab === 'profile' && (
+              <SectionBox key="profile" title="Public Profile" sub="Manage your presence">
+                <div className="flex flex-col sm:flex-row gap-8 items-center sm:items-start">
+                  <div className="relative group/avatar">
+                    <div className="size-28 rounded-[2.5rem] bg-[#0a0a0a] border-2 border-[#1a1a1a] flex items-center justify-center text-4xl font-black text-white shadow-2xl overflow-hidden relative">
+                      {user?.avatar_url && !imgError ? ( <img src={getFullUrl(user.avatar_url)} alt="Avatar" className="w-full h-full object-cover" onError={() => setImgError(true)} /> ) : user?.username?.[0]?.toUpperCase()}
+                      {isUploading && ( <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div> )}
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-foreground ml-0.5">Gender</Label>
-                      {isEditingProfile ? (
-                        <input 
-                          type="text" 
-                          value={profileValues.gender}
-                          onChange={(e) => setProfileValues({...profileValues, gender: e.target.value})}
-                          className="w-full h-11 bg-accent/50 border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                          placeholder="Identify"
-                        />
-                      ) : (
-                        <div className="w-full h-11 bg-accent/20 border border-border/50 rounded-xl px-4 flex items-center text-sm text-foreground/80 font-medium">
-                          {user?.gender || "Not specified"}
+                    <label className="absolute -bottom-1 -right-1 size-9 bg-[#101010] border border-[#1a1a1a] rounded-2xl flex items-center justify-center cursor-pointer shadow-xl hover:scale-110 transition-transform">
+                      <Camera className="size-4" />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
+                    </label>
+                  </div>
+                  <div className="flex-1 w-full space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-primary">Profile Info</h3>
+                        <p className="text-[9px] text-muted-foreground font-medium">UID: #{user?.id || 0}</p>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditModalOpen(true)} className="h-8 text-[10px] font-black uppercase tracking-widest bg-primary/5 hover:bg-primary/10 text-primary">
+                        <Edit3 className="size-3 mr-1.5" /> Edit Profile
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <ProfileInfo icon={User} label="Nickname" value={user?.nickname || user?.username} />
+                      <ProfileInfo icon={MapPin} label="Location" value={user?.location || "N/A"} />
+                      <ProfileInfo icon={Calendar} label="Age" value={user?.age?.toString() || "N/A"} />
+                      <ProfileInfo icon={LinkIcon} label="Social Link" value={user?.social_link || "N/A"} />
+                      <div className="sm:col-span-2 p-4 bg-[#0a0a0a]/50 rounded-2xl border border-[#1a1a1a]/50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Edit3 className="size-3 text-muted-foreground" />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Bio</span>
                         </div>
-                      )}
+                        <p className="text-xs text-muted-foreground italic leading-relaxed">{user?.bio || "No bio yet."}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="lg:col-span-5">
-                <div className="bg-accent/30 border border-border/50 rounded-2xl p-6 space-y-4">
-                  <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Discovery Guide</h5>
-                  <p className="text-xs leading-relaxed text-muted-foreground font-medium">
-                    Your profile details help Eco match you with kindred spirits. A complete bio increases your visibility in the Social Discovery feed.
-                  </p>
-                  <Separator className="bg-border/50" />
-                  <ul className="space-y-3">
-                    {["Detailed Bio", "Current Location", "Film Preferences"].map((item, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-foreground/70">
-                        <Check className="w-3 h-3 text-primary" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {isEditingProfile && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-end gap-3 pt-6 border-t border-border"
-              >
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setIsEditingProfile(false)}
-                  className="h-10 px-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-accent rounded-xl"
-                >
-                  Discard
-                </Button>
-                <Button 
-                  onClick={handleUpdateProfile}
-                  disabled={isSubmitting}
-                  className="h-10 px-8 bg-primary text-primary-foreground rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:shadow-primary/20 transition-all active:scale-[0.98]"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Commit Changes"}
-                </Button>
-              </motion.div>
+              </SectionBox>
             )}
-          </div>
-        </div>
-      
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Palette className="w-4 h-4 text-foreground/70" />
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">App Preferences</label>
-        </div>
-
-        <div className="w-full rounded-xl border border-border bg-card p-6 shadow-sm space-y-6">
-          <div>
-            <h3 className="text-lg font-bold tracking-tight text-foreground">Interface & Features</h3>
-            <p className="text-muted-foreground text-xs font-medium mt-0.5">Personalize your cinematic experience.</p>
-          </div>
-          
-          <div className="space-y-4">
-            {/* Theme Toggle */}
-            <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all group">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="theme-mode" className="text-sm font-bold cursor-pointer text-foreground">Theme Mode</Label>
-                  {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-foreground" /> : <Sun className="w-3.5 h-3.5 text-foreground" />}
+            {activeTab === 'preferences' && (
+              <SectionBox key="preferences" title="App Settings" sub="General preferences">
+                <div className="space-y-4">
+                  <PreferenceRow icon={Moon} label="Dark Mode" sub="Toggle dark interface" checked={theme === 'dark'} onToggle={(val) => setTheme(val ? 'dark' : 'light')} />
+                  <PreferenceRow icon={Sparkles} label="AI Eco Assistant" sub="Enable cinematic AI chat" checked={aiEnabled} onToggle={async (val) => {
+                    setAiEnabled(val);
+                    await authApi.updateUserField({ field: "ai_enabled", value: val });
+                    await checkAuth(true);
+                  }} />
                 </div>
-                <p className="text-[10px] text-muted-foreground font-medium">Switch between dark & light cinematic modes.</p>
-              </div>
-              <Switch 
-                id="theme-mode"
-                checked={theme === 'dark'}
-                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-              />
-            </div>
-
-            {/* AI Toggle */}
-            <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all group">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="ai-toggle" className="text-sm font-bold cursor-pointer text-foreground">AI Eco Assistant</Label>
-                  <Sparkles className="w-3.5 h-3.5 text-foreground" />
+              </SectionBox>
+            )}
+            {activeTab === 'privacy' && (
+              <SectionBox key="privacy" title="Privacy Settings" sub="What others can see">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { id: 'show_bio', label: 'Show Bio', icon: User },
+                    { id: 'show_favorites', label: 'Show Favorites', icon: LayoutGrid },
+                    { id: 'show_age', label: 'Show Age', icon: Fingerprint },
+                    { id: 'show_location', label: 'Show Location', icon: Globe }
+                  ].map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-4 bg-[#0a0a0a]/50 border border-[#1a1a1a] rounded-2xl hover:border-primary/20 transition-all">
+                      <div className="flex items-center gap-3">
+                        <item.icon className="size-3.5 text-muted-foreground" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                      </div>
+                      <Switch checked={(user as any)?.[item.id] ?? true} onCheckedChange={async (val) => { await authApi.updateUserField({ field: item.id, value: val }); await checkAuth(true); }} />
+                    </div>
+                  ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground font-medium">Enable deep cinematic analysis & chat memory.</p>
-              </div>
-              <Switch 
-                id="ai-toggle"
-                checked={aiEnabled}
-                onCheckedChange={handleToggleAi}
-              />
-            </div>
-
-            {/* Toast Limit */}
-            <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all group">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="toast-limit" className="text-sm font-bold cursor-pointer text-foreground">Feedback Frequency</Label>
-                  <Bell className="w-3.5 h-3.5 text-foreground" />
+              </SectionBox>
+            )}
+            {activeTab === 'security' && (
+              <SectionBox key="security" title="Account Security" sub="Protect your access">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <SecurityInfo icon={Mail} label="Email Address" value={user?.email} />
+                    <SecurityInfo icon={Fingerprint} label="Username" value={user?.username} />
+                  </div>
+                  <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-primary/10 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><Lock className="size-4" /></div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-primary">Password</h4>
+                        <p className="text-[10px] text-primary/60">Change your login credentials.</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 text-primary group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground font-medium">Control the number of notification alerts.</p>
-              </div>
-              <div className="relative">
-                <select 
-                  id="toast-limit"
-                  value={toastLimit} 
-                  onChange={handleToastLimitChange}
-                  className="bg-accent border border-transparent rounded-lg px-3 py-1.5 text-foreground font-bold text-[9px] uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-ring transition-all appearance-none cursor-pointer pr-7"
-                >
-                  <option value="1">1 Alert</option>
-                  <option value="3">3 Max</option>
-                  <option value="5">5 Max</option>
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Shield className="w-4 h-4 text-foreground/70" />
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Privacy & Identity</label>
-        </div>
-
-        <div className="w-full rounded-xl border border-border bg-card p-6 shadow-sm space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Core Information</h4>
-              
-              <div className="space-y-3">
-                <InfoRow Icon={Mail} label="Email Address" value={user?.email || "N/A"} />
-                <InfoRow Icon={User} label="Unique Username" value={user?.username || "N/A"} />
-                <InfoRow Icon={Fingerprint} label="Account ID" value={`#${user?.id || "0"}`} />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Digital Trace (Current Node)</h4>
-              
-              <div className="space-y-3">
-                <InfoRow Icon={Globe} label="Geo Location" value={`${user?.city || "Unknown"}, ${user?.country || "Earth"}`} />
-                <InfoRow Icon={Server} label="IP Signature" value={user?.ip || "0.0.0.0"} />
-                <InfoRow Icon={Smartphone} label="Host OS" value={user?.os || "Unknown Platform"} />
-              </div>
-            </div>
-          </div>
-          
-          <div className="pt-6 border-t border-border space-y-4">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Public Visibility</h4>
-            <p className="text-[10px] text-muted-foreground font-medium">Control what other users see on your public profile.</p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <PrivacyToggle 
-                label="Show Bio" 
-                checked={user?.show_bio ?? true} 
-                onToggle={async (val) => {
-                  await authApi.updateUserField({ field: "show_bio", value: val });
-                  await checkAuth(true);
-                }}
-              />
-              <PrivacyToggle 
-                label="Show Favorites" 
-                checked={user?.show_favorites ?? true} 
-                onToggle={async (val) => {
-                  await authApi.updateUserField({ field: "show_favorites", value: val });
-                  await checkAuth(true);
-                }}
-              />
-              <PrivacyToggle 
-                label="Show Age" 
-                checked={user?.show_age ?? true} 
-                onToggle={async (val) => {
-                  await authApi.updateUserField({ field: "show_age", value: val });
-                  await checkAuth(true);
-                }}
-              />
-              <PrivacyToggle 
-                label="Show Gender" 
-                checked={user?.show_gender ?? true} 
-                onToggle={async (val) => {
-                  await authApi.updateUserField({ field: "show_gender", value: val });
-                  await checkAuth(true);
-                }}
-              />
-              <PrivacyToggle 
-                label="Show Location" 
-                checked={user?.show_location ?? true} 
-                onToggle={async (val) => {
-                  await authApi.updateUserField({ field: "show_location", value: val });
-                  await checkAuth(true);
-                }}
-              />
-              <PrivacyToggle 
-                label="Public Discovery" 
-                checked={!(user?.is_private ?? false)} 
-                onToggle={async (val) => {
-                  await authApi.updateUserField({ field: "is_private", value: !val });
-                  await checkAuth(true);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-border">
-            <div className="bg-accent/30 rounded-2xl p-4 flex items-start gap-3">
-              <div className="mt-0.5">
-                <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-muted-foreground leading-relaxed">
-                  Your privacy is our priority. Metadata is encrypted and used only for security auditing and personalized AI analysis. CineWave never sells your digital signature.
-                </p>
-              </div>
-            </div>
-          </div>
+              </SectionBox>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
   );
 }
 
-const InfoRow = ({ Icon, label, value }: { Icon: any, label: string, value: string }) => (
-  <div className="flex items-center gap-3">
-    <div className="size-8 rounded-lg bg-accent/50 flex items-center justify-center text-muted-foreground">
-      <Icon className="w-4 h-4" />
-    </div>
-    <div className="flex-1">
-      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mb-1">{label}</p>
-      <p className="text-sm font-bold tracking-tight text-foreground">{value}</p>
-    </div>
-  </div>
-);
-
-const PrivacyToggle = ({ label, checked, onToggle }: { label: string, checked: boolean, onToggle: (val: boolean) => Promise<void> }) => {
-  const [loading, setLoading] = useState(false);
-
-  const handleToggle = async () => {
-    setLoading(true);
-    try {
-      await onToggle(!checked);
-      toast.success(`${label} updated!`);
-    } catch (err) {
-      toast.error(`Failed to update ${label}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function ProfileInfo({ icon: Icon, label, value }: { icon: any, label: string, value: any }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-accent/30 rounded-xl border border-transparent hover:border-border transition-all">
-      <span className="text-[10px] font-bold text-foreground uppercase tracking-widest">{label}</span>
-      {loading ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-      ) : (
-        <Switch checked={checked} onCheckedChange={handleToggle} />
-      )}
+    <div className="p-4 bg-[#0a0a0a]/50 rounded-2xl border border-[#1a1a1a]/50 space-y-1">
+      <div className="flex items-center gap-2">
+        <Icon className="size-3 text-muted-foreground" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</span>
+      </div>
+      <p className="text-xs font-bold truncate">{value}</p>
     </div>
   );
-};
+}
+
+function PreferenceRow({ icon: Icon, label, sub, checked, onToggle }: { icon: any, label: string, sub: string, checked: boolean, onToggle: (val: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between p-4 bg-[#0a0a0a]/50 border border-[#1a1a1a] rounded-2xl group hover:border-primary/30 transition-all">
+      <div className="flex items-center gap-4">
+        <div className="size-10 rounded-xl bg-[#1a1a1a] flex items-center justify-center shadow-lg"><Icon className={cn("size-4", label.includes("AI") ? "text-primary" : "")} /></div>
+        <div>
+          <h4 className="text-xs font-black uppercase tracking-widest">{label}</h4>
+          <p className="text-[10px] text-muted-foreground">{sub}</p>
+        </div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onToggle} />
+    </div>
+  );
+}
+
+function SecurityInfo({ icon: Icon, label, value }: { icon: any, label: string, value: any }) {
+  return (
+    <div className="p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon className="size-3 text-primary" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{label}</span>
+      </div>
+      <p className="text-xs font-bold truncate">{value}</p>
+    </div>
+  );
+}

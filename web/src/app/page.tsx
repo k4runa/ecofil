@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuthStore } from "@/lib/store";
+import { useAuthStore, useDashboardStore } from "@/lib/store";
 import { AuthForm } from "@/components/auth/auth-form";
 import { VercelV0Chat } from "@/components/chat/v0-ai-chat";
 import { MovieDashboard } from "@/components/movies/dashboard";
@@ -34,9 +34,7 @@ export default function Home() {
   const { isAuthenticated, user, isLoading, checkAuth, logout } =
     useAuthStore();
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "movies" | "recommendations" | "settings" | "social" | "favorites" | "messages"
-  >("movies");
+  const { activeTab, setActiveTab } = useDashboardStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedSocialUser, setSelectedSocialUser] = useState<any | null>(null);
   const [chatPlaceholder, setChatPlaceholder] = useState("Ask Eco anything...");

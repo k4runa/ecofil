@@ -90,6 +90,7 @@ class ProfileUpdate(BaseModel):
     gender:     str | None = Field(None, max_length=30)
     age:        int | None = Field(None, ge=13, le=120)
     location:   str | None = Field(None, max_length=100)
+    social_link: str | None = Field(None, max_length=200)
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +114,7 @@ class UserResponse(BaseModel):
     gender:     str | None = None
     age:        int | None = None
     location:   str | None = None
+    social_link: str | None = None
     show_age:   bool = True
     show_gender: bool = True
     show_location: bool = True

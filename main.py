@@ -13,6 +13,7 @@ Run via Docker:
 
 import os
 from fastapi import FastAPI, Request
+from sqlalchemy import text
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
@@ -28,7 +29,9 @@ from services.database import (
     MovieAlreadyExists,
     MovieNotFoundError,
     ReservedUsernameError,
+    init_database
 )
+from services import database as db_mod
 from services.deps import users_manager
 from routers import auth, users, movies, ai, social
 from sqlalchemy.exc import IntegrityError
@@ -46,7 +49,21 @@ async def lifespan(app: FastAPI):
     At startup, creates database tables and ensures that at least one
     admin account is seeded.
     """    
-    logger.info("Application startup: Seeding admin if missing...")
+    logger.info("Application startup: Ensuring tables exist and seeding admin...")
+    # Auto-create tables on startup
+    if db_mod._engine:
+        async with db_mod._engine.begin() as conn:
+            await conn.run_sync(db_mod.Base.metadata.create_all)
+            # FORCE FIX: Check if social_link exists, if not add it
+            try:
+                check_sql = text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='social_link';")
+                result = await conn.execute(check_sql)
+                if not result.scalar():
+                    logger.info("Auto-Migration: Adding missing 'social_link' column...")
+                    await conn.execute(text("ALTER TABLE users ADD COLUMN social_link VARCHAR(255);"))
+            except Exception as e:
+                logger.warning(f"Auto-Migration skipped or failed: {e}")
+            
     await users_manager.ensure_admin_exists()  # type: ignore
     # Start background cache cleaner
     cache_task = asyncio.create_task(cache_service.clear_expired())
@@ -69,7 +86,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; "
             "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; "
-            "img-src 'self' https://image.tmdb.org https://images.placeholders.dev data: blob:; "
+            "img-src 'self' https://image.tmdb.org https://images.placeholders.dev https://res.cloudinary.com https://api.dicebear.com data: blob:; "
             "connect-src 'self' https://api.themoviedb.org https://accounts.google.com/gsi/; "
             "font-src 'self' https://fonts.gstatic.com; "
             "frame-src https://accounts.google.com/gsi/; "
@@ -96,6 +113,15 @@ app = FastAPI(
     redoc_url="/redoc" if DEBUG else None,
     openapi_url="/openapi.json" if DEBUG else None,
 )
+
+# ---------------------------------------------------------------------------
+# Database Initialization
+# ---------------------------------------------------------------------------
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    logger.error("DATABASE_URL not found in environment!")
+else:
+    init_database(DATABASE_URL)
 
 # Parse allowed origins from environment
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000")
@@ -127,12 +153,11 @@ app.include_router(social.router)
 @app.get("/health", tags=["system"])
 async def health_check():
     """Deep health probe: checks application + database connectivity."""
-    from services.database import _engine
     db_ok = False
     try:
-        if _engine:
-            async with _engine.connect() as conn:
-                await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+        if db_mod._engine:
+            async with db_mod._engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
             db_ok = True
     except Exception:
         pass

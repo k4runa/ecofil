@@ -64,7 +64,13 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
-    return {"access_token": access_token,"token_type": "bearer","username": user_in_db["username"],"role": user_in_db["role"],}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "username": user_in_db["username"],
+        "role": user_in_db["role"],
+        "avatar_url": user_in_db.get("avatar_url"),
+    }
 
 
 @router.post("/google-login")
@@ -76,13 +82,23 @@ async def google_login(response: Response, request: Request, body: GoogleLoginRe
     idinfo = await verify_google_token(body.credential)
     
     if not idinfo:
+        logger.warning("GOOGLE LOGIN FAILED: Invalid token provided.")
         raise HTTPException(status_code=401, detail="Invalid Google token")
     email = idinfo.get("email")
     name = idinfo.get("name", "Google User")
     if not email:
+        logger.warning("GOOGLE LOGIN FAILED: Email not provided in token.")
         raise HTTPException(status_code=400, detail="Email not provided by Google")
+    
+    logger.info(f"GOOGLE LOGIN ATTEMPT: Email '{email}'")
     # Get or create user in DB
-    user_in_db = await users_manager.get_or_create_google_user(email=email,name=name,ip=request.client.host if request.client else "Unknown",user_agent=request.headers.get("user-agent", "Unknown")) #type: ignore
+    user_in_db = await users_manager.get_or_create_google_user(
+        email=email,
+        name=name,
+        avatar_url=idinfo.get("picture"),
+        ip=request.client.host if request.client else "Unknown",
+        user_agent=request.headers.get("user-agent", "Unknown")
+    ) #type: ignore
     access_token = create_access_token(data={"sub": user_in_db["username"]})
     # Fix 8.1: Set httpOnly cookie
     response.set_cookie(key="access_token",value=access_token,httponly=True,secure=True,samesite="lax",max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
@@ -91,6 +107,7 @@ async def google_login(response: Response, request: Request, body: GoogleLoginRe
         "token_type": "bearer",
         "username": user_in_db["username"],
         "role": user_in_db["role"],
+        "avatar_url": user_in_db.get("avatar_url"),
     }
 
 

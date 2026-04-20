@@ -7,9 +7,14 @@ const api = axios.create({
   withCredentials: true,
 });
 
-export const getFullUrl = (path: string) => {
+export const getFullUrl = (path: string | null) => {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http')) {
+    // Add a cache-buster for Cloudinary or external URLs to force refresh
+    const url = new URL(path);
+    url.searchParams.set('t', Date.now().toString());
+    return url.toString();
+  }
   return `${API_BASE_URL}${path}`;
 };
 

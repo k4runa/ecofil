@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { authApi } from '@/lib/api';
 
 export interface User {
@@ -29,6 +30,7 @@ export interface User {
   show_favorites?: boolean;
   ip?: string;
   device_name?: string;
+  social_link?: string;
 }
 
 interface AuthState {
@@ -62,8 +64,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       } catch (err) {
         console.warn("Profile fetch failed, using login response data", err);
+        const { avatar_url } = res.data;
         set({ 
-          user: { username, role }, 
+          user: { username, role, avatar_url }, 
           isAuthenticated: true, 
           isLoading: false 
         });
@@ -89,8 +92,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       } catch (err) {
         console.warn("Profile fetch failed, using login response data", err);
+        const { avatar_url } = res.data;
         set({ 
-          user: { username, role }, 
+          user: { username, role, avatar_url }, 
           isAuthenticated: true, 
           isLoading: false 
         });
@@ -142,6 +146,23 @@ export const useSocialUIStore = create<SocialState>((set) => ({
   unreadTotal: 0,
   setUnreadTotal: (count) => set({ unreadTotal: count }),
 }));
+
+interface DashboardState {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+export const useDashboardStore = create<DashboardState>()(
+  persist(
+    (set) => ({
+      activeTab: 'library',
+      setActiveTab: (tab) => set({ activeTab: tab }),
+    }),
+    {
+      name: 'cinewave-dashboard-storage',
+    }
+  )
+);
 
 // Auto-logout when the API interceptor detects a 401
 if (typeof window !== 'undefined') {

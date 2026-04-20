@@ -17,14 +17,25 @@ Endpoints:
 from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Body, Response
 import os
 from pydantic import BaseModel
-from services.database import logger
+from services.database import logger, UserNotFoundError
 from services.schemas import UserScheme, APIResponseUser, APIResponseUsersList, ProfileUpdate
 from services.deps import users_manager, limiter
 from services.auth import get_current_user, create_access_token, get_token_from_cookie_or_header, blacklist_token, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from services.cloudinary_utils import upload_image
 import jwt
+import tempfile
+import shutil
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+def validate_password_strength(password: str):
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long.")
+    if not any(c.isupper() for c in password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one uppercase letter.")
+    if not any(c.isdigit() for c in password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one digit.")
 
 async def _revoke_token(token: str):
     """Helper to blacklist a token until it naturally expires."""
@@ -72,6 +83,8 @@ async def register(response: Response, request: Request, user: UserScheme):
     Automatically collects device (User-Agent) and network (IP) metadata
     from the request headers for security and analytics.
     """
+    validate_password_strength(user.password)
+
     # Extract metadata from headers
     user_agent = request.headers.get("User-Agent", "Unknown")
     # Capture real IP, considering proxies like Render's load balancer
@@ -80,7 +93,17 @@ async def register(response: Response, request: Request, user: UserScheme):
         ip = forwarded.split(",")[0].strip()
     else:
         ip = request.client.host if request.client else "127.0.0.1"
-    await users_manager.add_user(user, user_agent=user_agent, ip=ip) # type:ignore
+    
+    try:
+        await users_manager.add_user(user, user_agent=user_agent, ip=ip) # type:ignore
+    except Exception as e:
+        err_str = str(e).lower()
+        if "unique" in err_str or "already exists" in err_str:
+            if "username" in err_str:
+                raise HTTPException(status_code=400, detail="This username is already taken.")
+            if "email" in err_str:
+                raise HTTPException(status_code=400, detail="This email is already registered.")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     
     # Fix 8.1: Set cookie on registration
     access_token = create_access_token(data={"sub": user.username})
@@ -198,41 +221,45 @@ async def update_user_profile(profile_data: ProfileUpdate = Body(...), current_u
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_AVATAR_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-MAX_AVATAR_BYTES = 2 * 1024 * 1024  # 2 MB
+MAX_AVATAR_BYTES = 5 * 1024 * 1024  # 5 MB
 
 @router.post("/avatar")
 @limiter.limit("5/minute")
 async def upload_avatar(request: Request,file: UploadFile = File(...),current_user: dict = Depends(get_current_user)):
     """
     Upload a profile picture for the authenticated user.
-    Saves the file locally and updates the avatar_url in the database.
+    Saves the file to Cloudinary and updates the avatar_url in the database.
     """
-    # Validate MIME type
     if file.content_type not in ALLOWED_AVATAR_TYPES:
         raise HTTPException(status_code=400, detail=f"File must be an image ({', '.join(ALLOWED_AVATAR_EXTS)}).")
 
-    # Validate extension
     ext = os.path.splitext(file.filename)[1].lower() if file.filename else ".jpg"
     if ext not in ALLOWED_AVATAR_EXTS:
-        raise HTTPException(status_code=400, detail=f"Invalid file extension. Allowed: {', '.join(ALLOWED_AVATAR_EXTS)}")
+        raise HTTPException(status_code=400, detail=f"Invalid file extension.")
 
-    # Enforce file size server-side (read up to limit + 1 byte to detect oversize)
-    contents = await file.read(MAX_AVATAR_BYTES + 1)
-    if len(contents) > MAX_AVATAR_BYTES:
-        raise HTTPException(status_code=400, detail="Avatar file must be under 2 MB.")
-
-    filename = f"{current_user['username']}_{int(datetime.now().timestamp())}{ext}"
-    file_path = os.path.join("uploads", filename)
+    # Save to a temporary file first
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        content = await file.read(MAX_AVATAR_BYTES + 1)
+        if len(content) > MAX_AVATAR_BYTES:
+            os.unlink(tmp.name)
+            raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+        tmp.write(content)
+        tmp_path = tmp.name
 
     try:
-        os.makedirs("uploads", exist_ok=True)
-        with open(file_path, "wb") as buffer:
-            buffer.write(contents)
+        # Upload to Cloudinary
+        public_id = f"avatar_{current_user['username']}"
+        logger.info(f"CLOUDINARY UPLOAD START: User '{current_user['username']}' uploading new avatar...")
+        avatar_url = await upload_image(tmp_path, public_id)
+        logger.info(f"CLOUDINARY UPLOAD SUCCESS: URL generated: {avatar_url}")
         
-        avatar_url = f"/uploads/{filename}"
-        await users_manager.update_user_field(current_user["username"], "avatar_url", avatar_url)   #type: ignore
+        # Update DB
+        await users_manager.update_user_field(current_user["username"], "avatar_url", avatar_url) # type: ignore
         
         return {"success": True, "avatar_url": avatar_url}
     except Exception as e:
-        logger.error(f"Avatar upload failed: {type(e).__name__}")
-        raise HTTPException(status_code=500, detail="Could not save avatar.")
+        logger.error(f"CLOUDINARY UPLOAD FAILED: User '{current_user['username']}' - Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Could not upload avatar to cloud storage.")
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)

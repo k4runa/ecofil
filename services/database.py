@@ -36,6 +36,7 @@ from typing import List, Optional, Any
 import os
 import logging
 import bcrypt
+import secrets
 from datetime import datetime, timezone
 from collections import Counter
 from dotenv import load_dotenv
@@ -163,55 +164,56 @@ class User(Base):
         movies — one-to-many link to the Movies table (tracked films).
     """
 
-    __tablename__                                           =   "users"
+    __tablename__                                                   =   "users"
 
-    id:                             Mapped[int]             =   mapped_column(primary_key=True)
-    username:                       Mapped[str]             =   mapped_column(String, unique=True, nullable=False)
-    nickname:                       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    role:                           Mapped[str]             =   mapped_column(String, nullable=False, default="user", server_default="user")
-    password:                       Mapped[str]             =   mapped_column(String, nullable=False)
-    email:                          Mapped[str]             =   mapped_column(String, unique=True, nullable=False)
-    avatar_url:                     Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    bio:                            Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    gender:                         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    age:                            Mapped[Optional[int]]   =   mapped_column(Integer, nullable=True)
-    location:                       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    show_age:                       Mapped[bool]            =   mapped_column(Boolean, default=True)
-    show_gender:                    Mapped[bool]            =   mapped_column(Boolean, default=True)
-    show_location:                  Mapped[bool]            =   mapped_column(Boolean, default=True)
-    show_bio:                       Mapped[bool]            =   mapped_column(Boolean, default=True)
-    show_favorites:                 Mapped[bool]            =   mapped_column(Boolean, default=True)
+    id:                             Mapped[int]                     =   mapped_column(primary_key=True)
+    username:                       Mapped[str]                     =   mapped_column(String, unique=True, nullable=False)
+    nickname:                       Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    role:                           Mapped[str]                     =   mapped_column(String, nullable=False, default="user", server_default="user")
+    password:                       Mapped[str]                     =   mapped_column(String, nullable=False)
+    email:                          Mapped[str]                     =   mapped_column(String, unique=True, nullable=False)
+    avatar_url:                     Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    bio:                            Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    gender:                         Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    age:                            Mapped[Optional[int]]           =   mapped_column(Integer, nullable=True)
+    location:                       Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    social_link:                    Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    show_age:                       Mapped[bool]                    =   mapped_column(Boolean, default=True)
+    show_gender:                    Mapped[bool]                    =   mapped_column(Boolean, default=True)
+    show_location:                  Mapped[bool]                    =   mapped_column(Boolean, default=True)
+    show_bio:                       Mapped[bool]                    =   mapped_column(Boolean, default=True)
+    show_favorites:                 Mapped[bool]                    =   mapped_column(Boolean, default=True)
 
     # --- Device fingerprint (collected at signup) ---
-    device:                         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    device_name:                    Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    machine:                        Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    os:                             Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    memory:                         Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    hostname:                       Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    device:                         Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    device_name:                    Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    machine:                        Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    os:                             Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    memory:                         Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    hostname:                       Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
 
     # --- Network / geolocation ---
-    country:                        Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    city:                           Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
-    ip:                             Mapped[Optional[str]]   =   mapped_column(String, nullable=True)
+    country:                        Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    city:                           Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
+    ip:                             Mapped[Optional[str]]           =   mapped_column(String, nullable=True)
 
     # --- Account settings ---
-    ai_enabled:                     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    max_toasts:                     Mapped[int]             =   mapped_column(Integer, nullable=False, default=5, server_default="5")
-    dm_notifications:               Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    muted_users:                    Mapped[Optional[str]]   =   mapped_column(String, nullable=True) # Comma-separated list of IDs
+    ai_enabled:                     Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    max_toasts:                     Mapped[int]                     =   mapped_column(Integer, nullable=False, default=5, server_default="5")
+    dm_notifications:               Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    muted_users:                    Mapped[Optional[str]]           =   mapped_column(String, nullable=True) # Comma-separated list of IDs
 
     # --- Account lifecycle ---
-    is_deleted:                     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=False)
-    is_private:                     Mapped[bool]            =   mapped_column(Boolean, nullable=False, default=False)  # If true, won't show in 'Similar Minds'
-    created_at:                     Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
-    last_seen:                      Mapped[str]             =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    is_deleted:                     Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=False)
+    is_private:                     Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=False)  # If true, won't show in 'Similar Minds'
+    created_at:                     Mapped[str]                     =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
+    last_seen:                      Mapped[str]                     =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
     # --- Relationships ---
-    movies:                         Mapped[List["Movies"]]   = relationship("Movies", back_populates="user", lazy="selectin")
-    sent_messages:                  Mapped[List["Message"]]  = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
-    received_messages:              Mapped[List["Message"]]  = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
-    conversations:                  Mapped[List["Conversation"]] = relationship("Conversation", primaryjoin="or_(User.id==Conversation.user1_id, User.id==Conversation.user2_id)", viewonly=True)
+    movies:                         Mapped[List["Movies"]]          = relationship("Movies", back_populates="user", lazy="selectin")
+    sent_messages:                  Mapped[List["Message"]]         = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    received_messages:              Mapped[List["Message"]]         = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
+    conversations:                  Mapped[List["Conversation"]]    = relationship("Conversation", primaryjoin="or_(User.id==Conversation.user1_id, User.id==Conversation.user2_id)", viewonly=True)
 
 
 class Movies(Base):
@@ -245,7 +247,6 @@ class Movies(Base):
     user:               Mapped["User"]                  =   relationship("User", back_populates="movies")
     watched_movies:     Mapped[List["WatchedMovies"]]   =   relationship("WatchedMovies",back_populates="movie",lazy="selectin",cascade="all, delete-orphan",)
 
-
 class WatchedMovies(Base):
     """
     Records when a user marks a movie as 'Watched'.
@@ -264,10 +265,8 @@ class WatchedMovies(Base):
     title:              Mapped[str]                 =   mapped_column(String, nullable=False)
     status:             Mapped[str]                 =   mapped_column(String, nullable=False)
     watched_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
-
     who_watched:        Mapped["User"]              =   relationship("User")
     movie:              Mapped["Movies"]            =   relationship("Movies", back_populates="watched_movies")
-
 
 class Message(Base):
     """
@@ -287,7 +286,6 @@ class Message(Base):
     is_edited:          Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
     edited_at:          Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
     created_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), index=True)
-
     sender:             Mapped["User"]              =   relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
     receiver:           Mapped["User"]              =   relationship("User", foreign_keys=[receiver_id], back_populates="received_messages")
 
@@ -305,7 +303,6 @@ class Conversation(Base):
     status:             Mapped[str]                 =   mapped_column(String, default="PENDING", server_default="PENDING") # PENDING, ACCEPTED, BLOCKED
     created_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
     updated_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
-
     user1:              Mapped["User"]              =   relationship("User", foreign_keys=[user1_id])
     user2:              Mapped["User"]              =   relationship("User", foreign_keys=[user2_id])
 
@@ -388,16 +385,16 @@ class UserManager:
 
         @wraps(func)
         async def wrapper(self, *args, **kwargs):
-            logger.info(f"Running function: {func.__name__}")
+            logger.info(f"TRANSACTION START: {func.__name__}")
             async with self.session() as session:
                 try:
                     result = await func(self, session, *args, **kwargs)
                     await session.commit()
-                    logger.info(f"Done function: {func.__name__}")
+                    logger.info(f"TRANSACTION COMMIT: {func.__name__} (Success)")
                     return result
                 except Exception as e:
                     await session.rollback()
-                    logger.error(f"Error in function: {func.__name__} - {str(e)}")
+                    logger.error(f"TRANSACTION ROLLBACK: {func.__name__} - Error: {str(e)}")
                     raise
 
         return wrapper
@@ -425,39 +422,32 @@ class UserManager:
         # Basic User-Agent Parsing logic
         ua                      =   user_agent.lower()
         os_name                 =   "Unknown OS"
-        
         if "windows" in ua:
             os_name             =   "Windows"
-
         elif "macintosh" in ua or "mac os" in ua:
             os_name             =   "macOS"
-        
         elif "linux" in ua:
             os_name             =   "Linux"
-        
         elif "android" in ua:
             os_name             =   "Android"
-        
         elif "iphone" in ua or "ipad" in ua:
             os_name             =   "IOS"
-
         device_type             =   "Desktop"
-        
         if "mobile" in ua or "android" in ua or "iphone" in ua:
             device_type         =   "Mobile"
-        
         elif "tablet" in ua or "ipad" in ua:
             device_type         =   "Tablet"
-
         hashed                  =   await run_in_threadpool(bcrypt.hashpw, user.password.encode("utf-8"), bcrypt.gensalt())
         created_at              =   datetime.now(timezone.utc).isoformat()
         assigned_role           =   "user"
-
+        avatar_url              =   f"https://api.dicebear.com/7.x/avataaars/svg?seed={user.username}"
+        
         new_user                =   User(
                     username    =   user.username,
                     role        =   assigned_role,
                     password    =   hashed.decode("utf-8"),
                     email       =   user.email,
+                    avatar_url  =   avatar_url,
                     device      =   user.device or device_type,
                     os          =   user.os or os_name,
                     ip          =   ip,
@@ -470,9 +460,7 @@ class UserManager:
                     is_deleted  =   False,
                     created_at  =   created_at,
                     last_seen   =   created_at,
-        )  # type: ignore
-
-        # Fix 5.1: Removed TOCTOU pre-check. Rely on UNIQUE constraint + IntegrityError handler in main.py
+        )
         session.add(new_user)
         logger.info(f"Adding user: {new_user.username} - {new_user.email}")
         return True
@@ -514,12 +502,12 @@ class UserManager:
             logger.warning("Initial admin credentials not fully provided. Skipping superuser seeding.")
             return
 
-        # Check by USERNAME instead of just role to prevent UniqueViolation errors
-        stmt                    =   select(User).where(User.username == username)
+        # Check if ANY admin already exists in the system
+        stmt                    =   select(User).where(User.role == "admin")
         result                  =   await session.execute(stmt)
         
         if result.scalar_one_or_none():
-            logger.info(f"Admin seed: User '{username}' already exists. Skipping.")
+            logger.info("Admin seed: At least one admin already exists. Skipping superuser seeding.")
             return
 
         # Seed the superuser
@@ -557,9 +545,9 @@ class UserManager:
         """
         Update the last_seen timestamp for a user to the current time.
         """
-        stmt = select(User).where(User.username == username, User.is_deleted == False)
-        result = await session.execute(stmt)
-        user = result.scalar_one_or_none()
+        stmt    = select(User).where(User.username == username, User.is_deleted == False)
+        result  = await session.execute(stmt)
+        user    = result.scalar_one_or_none()
         if user:
             user.last_seen = datetime.now(timezone.utc).isoformat()
 
@@ -574,9 +562,9 @@ class UserManager:
         Raises:
             UserNotFoundError: If no matching user is found.
         """
-        stmt            =   select(User).where(User.username == username, User.is_deleted == False)
-        result          =   await session.execute(stmt)
-        user            =   result.scalar_one_or_none()
+        stmt    = select(User).where(User.username == username, User.is_deleted == False)
+        result  = await session.execute(stmt)
+        user    = result.scalar_one_or_none()
         if not user:
             raise UserNotFoundError(username)
         return {c.name: getattr(user, c.name) for c in user.__table__.columns}
@@ -584,15 +572,15 @@ class UserManager:
     @transaction
     async def get_user_by_email(self, session: AsyncSession, email: str) -> dict | None:
         """Fetch a user record by email address."""
-        stmt            =   select(User).where(User.email == email, User.is_deleted == False)
-        result          =   await session.execute(stmt)
-        user            =   result.scalar_one_or_none()
+        stmt    = select(User).where(User.email == email, User.is_deleted == False)
+        result  = await session.execute(stmt)
+        user    = result.scalar_one_or_none()
         if user:
             return {c.name: getattr(user, c.name) for c in user.__table__.columns}
         return None
 
     @transaction
-    async def get_or_create_google_user(self, session: AsyncSession, email: str, name: str, ip: str = "Unknown", user_agent: str = "Unknown") -> dict:
+    async def get_or_create_google_user(self, session: AsyncSession, email: str, name: str, avatar_url: str | None = None, ip: str = "Unknown", user_agent: str = "Unknown") -> dict:
         """Finds a user by email or creates a new one if they don't exist (OAuth)."""
         stmt            =   select(User).where(User.email == email, User.is_deleted == False)
         result          =   await session.execute(stmt)
@@ -601,11 +589,9 @@ class UserManager:
         if user:
             user.last_seen  =   datetime.now(timezone.utc).isoformat()
             return {c.name: getattr(user, c.name) for c in user.__table__.columns}
-
         # Create new user
         base_username   =   email.split("@")[0].replace(".", "_")
         username        =   base_username
-        
         # Unique username check
         counter         =   1
         while True:
@@ -615,17 +601,18 @@ class UserManager:
                 break
             username    =   f"{base_username}{counter}"
             counter     +=  1
-
-        import secrets
         random_pass     =   secrets.token_urlsafe(32)
         hashed          =   await run_in_threadpool(bcrypt.hashpw, random_pass.encode("utf-8"), bcrypt.gensalt())
         created_at      =   datetime.now(timezone.utc).isoformat()
+        if not avatar_url:
+            avatar_url  =   f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
 
         new_user        =   User(
                     username    =   username,
                     role        =   "user",
                     password    =   hashed.decode("utf-8"),
                     email       =   email,
+                    avatar_url  =   avatar_url,
                     device      =   "Desktop",
                     os          =   "Unknown",
                     ip          =   ip,
@@ -709,7 +696,7 @@ class UserManager:
         f_lower                     =   field.lower()
         ALLOWED_FIELDS              =   {
             "password", "email", "ai_enabled", "username", "nickname", "max_toasts", "avatar_url", 
-            "bio", "gender", "age", "location",
+            "bio", "gender", "age", "location", "social_link",
             "show_age", "show_gender", "show_location", "show_bio", "show_favorites", "is_private"
         }
 
@@ -772,9 +759,9 @@ class UserManager:
             setattr(user, "username", value)
             return True
 
-        # For 'email', we just set it directly
+        # For general fields, we just set it directly
         setattr(user, f_lower, value)
-        logger.info(f"Updated user: {user.username} - {field}")
+        logger.info(f"DATABASE UPDATE: User '{username}' field '{field}' set to '{value}'")
         return True
 
 
@@ -1506,13 +1493,13 @@ class SocialManager:
                         match_stmt = select(SimilarityMatch).where(SimilarityMatch.user_id == user_id, SimilarityMatch.target_id == other_id)
                         match_res = await session.execute(match_stmt)
                         match = match_res.scalar_one_or_none()
-                        
+
                         reasons = []
+
                         if shared_movies:
                             reasons.append(f"Both watched {len(shared_movies)} same films")
                         if common_genres:
                             reasons.append(f"Shared love for {len(common_genres)} genres")
-
                         if not match:
                             match = SimilarityMatch(user_id=user_id, target_id=other_id, score=total_score, reasons=", ".join(reasons))
                             session.add(match)
@@ -1528,47 +1515,45 @@ class SocialManager:
         """
         Fetch public profile data for a user including top genres and favorite movies.
         """
-        user_stmt = select(User).where(User.id == user_id, User.is_deleted == False)
+        user_stmt   = select(User).where(User.id == user_id, User.is_deleted == False)
         user_result = await session.execute(user_stmt)
-        user = user_result.scalar_one_or_none()
-        
+        user        = user_result.scalar_one_or_none()
         if not user:
             raise UserNotFoundError(str(user_id))
-
         # Get favorites
         fav_stmt = select(Movies).where(Movies.user_id == user.id, Movies.is_favorite == True).limit(3)
         fav_res = await session.execute(fav_stmt)
         favorites = [{
-            "id": m.id,
-            "tmdb_id": m.tmdb_id,
-            "title": m.title,
-            "poster_url": m.poster_url,
+            "id":           m.id,
+            "tmdb_id":      m.tmdb_id,
+            "title":        m.title,
+            "poster_url":   m.poster_url,
             "release_date": m.release_date
         } for m in fav_res.scalars().all()]
 
         # Get top genres
         movies_stmt = select(Movies.genre_ids).where(Movies.user_id == user.id)
-        movies_res = await session.execute(movies_stmt)
-        genre_rows = movies_res.scalars().all()
-        genre_ids = ",".join(genre_rows).strip(",")
+        movies_res  = await session.execute(movies_stmt)
+        genre_rows  = movies_res.scalars().all()
+        genre_ids   = ",".join(genre_rows).strip(",")
         
         top_genres = []
         if genre_ids:
-            ids = [int(i) for i in genre_ids.split(",")]
-            count = Counter(ids)
-            top_genres = [item for item, _ in count.most_common(3)]
+            ids         = [int(i) for i in genre_ids.split(",")]
+            count       = Counter(ids)
+            top_genres  = [item for item, _ in count.most_common(3)]
 
         return {
-            "id": user.id,
-            "username": user.username,
-            "nickname": user.nickname,
-            "avatar_url": user.avatar_url,
-            "bio": user.bio if user.show_bio else None,
-            "gender": user.gender if user.show_gender else None,
-            "age": user.age if user.show_age else None,
-            "location": user.location if user.show_location else None,
-            "created_at": user.created_at,
-            "last_seen": user.last_seen,
-            "favorites": favorites if user.show_favorites else [],
-            "top_genres": top_genres if user.show_favorites else []
+            "id":           user.id,
+            "username":     user.username,
+            "nickname":     user.nickname,
+            "avatar_url":   user.avatar_url,
+            "bio":          user.bio if user.show_bio else None,
+            "gender":       user.gender if user.show_gender else None,
+            "age":          user.age if user.show_age else None,
+            "location":     user.location if user.show_location else None,
+            "created_at":   user.created_at,
+            "last_seen":    user.last_seen,
+            "favorites":    favorites if user.show_favorites else [],
+            "top_genres":   top_genres if user.show_favorites else []
         }
