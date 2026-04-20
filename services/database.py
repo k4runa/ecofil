@@ -1197,9 +1197,14 @@ class SocialManager:
     async def handle_request(self, session: AsyncSession, user_id: int, other_id: int, action: str):
         """
         Accept or Decline a message request.
+        Finds the conversation regardless of who is user1 or user2.
         """
-        u1, u2 = sorted([user_id, other_id])
-        stmt = select(Conversation).where(Conversation.user1_id == u1, Conversation.user2_id == u2)
+        stmt = select(Conversation).where(
+            or_(
+                and_(Conversation.user1_id == user_id, Conversation.user2_id == other_id),
+                and_(Conversation.user1_id == other_id, Conversation.user2_id == user_id)
+            )
+        )
         res = await session.execute(stmt)
         conv = res.scalar_one_or_none()
 
@@ -1278,8 +1283,14 @@ class SocialManager:
         convs = res.scalars().all()
         
         results = []
+        seen_others = set()
         for c in convs:
             other_id = c.user2_id if c.user1_id == user_id else c.user1_id
+            
+            # Prevent showing the same user twice if duplicate records exist
+            if other_id in seen_others:
+                continue
+            seen_others.add(other_id)
             
             # Determine if I am the sender or receiver of this conversation request
             is_sender_of_request = False
