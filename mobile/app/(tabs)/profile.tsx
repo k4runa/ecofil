@@ -55,17 +55,12 @@ import QRCode from 'react-native-qrcode-svg';
 import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
-import * as Clipboard from 'expo-clipboard';
+
+import EditProfileModal from '../../components/profile/EditProfileModal';
+import ShareProfileModal from '../../components/profile/ShareProfileModal';
+import AccountInfoModal from '../../components/profile/AccountInfoModal';
 
 const APP_URL = process.env.EXPO_PUBLIC_APP_URL || 'https://ecofil.app';
-// Platform configurations for social links
-// Fallback to LinkIcon if specific brand icons aren't available in current lucide version
-/*const SOCIAL_PLATFORMS: Record<string, { label: string, icon: any, color: string, baseUrl: string }> = {
-  instagram: { label: "Instagram", icon: LinkIcon, color: "#E4405F", baseUrl: "https://instagram.com/" },
-  letterboxd: { label: "Letterboxd", icon: Film, color: "#FF8000", baseUrl: "https://letterboxd.com/" },
-  imdb: { label: "IMDb", icon: Star, color: "#F5C518", baseUrl: "https://imdb.com/user/" },
-  twitter: { label: "Twitter", icon: LinkIcon, color: "#1DA1F2", baseUrl: "https://twitter.com/" },
-}; */
 
 export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user);
@@ -85,15 +80,7 @@ export default function ProfileScreen() {
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
-  // Edit form state
-  const [editFullName, setEditFullName] = useState(user?.full_name || "");
-  const [editUsername, setEditUsername] = useState(user?.username || "");
-  const [editBio, setEditBio] = useState(user?.bio || "");
-  const [editSocials, setEditSocials] = useState<Record<string, string>>(user?.social_links || {});
-  const [newSocialUrl, setNewSocialUrl] = useState("");
-  const [isAddingSocial, setIsAddingSocial] = useState(false);
-
-  const [copied, setCopied] = useState(false);
+  // Modal form states moved to respective components
 
   // Fix for the white navigation bar on Android
   useEffect(() => {
@@ -102,21 +89,7 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      setEditFullName(user.full_name || "");
-      setEditUsername(user.username || "");
-      setEditBio(user.bio || "");
-      setEditSocials(user.social_links || {});
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!editModalVisible) {
-      setIsAddingSocial(false);
-      setNewSocialUrl("");
-    }
-  }, [editModalVisible]);
+  // Effects for Modals moved
 
   const toggleAI = async (value: boolean) => {
     setAiEnabled(value);
@@ -197,35 +170,7 @@ export default function ProfileScreen() {
     }, [libraryLoaded])
   );
 
-  const handleUpdateProfile = async () => {
-    setLoading(true);
-    try {
-      // 1. Update multi-fields
-      const profileRes = await usersApi.updateProfile({
-        full_name: editFullName,
-        bio: editBio,
-        social_links: editSocials
-      });
-
-      // 2. Update username if changed
-      if (editUsername !== user?.username) {
-        const userRes = await usersApi.updateField("username", editUsername);
-        if (userRes.data?.new_token) {
-          await SecureStore.setItemAsync('userToken', userRes.data.new_token);
-        }
-      }
-
-      const meRes = await authApi.getMe();
-      setUser(meRes.data.data.user);
-      setEditModalVisible(false);
-      Alert.alert("Done", "Profile updated.");
-    } catch (e: any) {
-      const detail = e.response?.data?.detail || "Could not update profile. Try again.";
-      Alert.alert("Error", detail);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // handleUpdateProfile logic moved to EditProfileModal
 
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -274,24 +219,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleShare = async () => {
-    const profileUrl = `${APP_URL}/u/${user?.username}`;
-    try {
-      await Share.share({
-        message: `Check out my profile: ${profileUrl}`,
-        url: profileUrl,
-      });
-    } catch (_error) {
-      // Share sheet dismissed — not an error
-    }
-  };
-
-  /* const openSocialLink = (platform: string, username: string) => {
-    const config = SOCIAL_PLATFORMS[platform];
-    if (config) {
-      Linking.openURL(`${config.baseUrl}${username}`);
-    }
-  }; */
+  // handleShare moved to ShareProfileModal
 
   const MenuOption = ({ icon: Icon, title, subtitle, color = "#525252", onPress }: any) => (
     <TouchableOpacity style={styles.menuOption} onPress={onPress}>
@@ -554,260 +482,10 @@ export default function ProfileScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* PRO Edit Profile Modal */}
-      <Modal
-        visible={editModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Profile</Text>
-              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                <X size={24} color="#525252" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={editFullName}
-                  onChangeText={setEditFullName}
-                  placeholder="Your real name"
-                  placeholderTextColor="#525252"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Username</Text>
-                <TextInput
-                  style={styles.input}
-                  value={editUsername}
-                  onChangeText={setEditUsername}
-                  placeholder="username"
-                  placeholderTextColor="#525252"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Bio</Text>
-                <TextInput
-                  style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-                  value={editBio}
-                  onChangeText={setEditBio}
-                  placeholder="A short bio"
-                  placeholderTextColor="#525252"
-                  multiline
-                />
-              </View>
-
-              <View style={styles.socialEditSection}>
-                <Text style={styles.inputLabel}>Social Links</Text>
-                {Object.entries(editSocials).map(([platform, url]) => (
-                  <View key={platform} style={styles.socialInputRow}>
-                    <View style={styles.socialPlatformLabel}>
-                      <LinkIcon size={14} color="#525252" style={{ marginRight: 8 }} />
-                      <Text style={styles.socialPlatformText}>{platform}</Text>
-                    </View>
-                    <TextInput
-                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                      value={url}
-                      onChangeText={(text) => setEditSocials({ ...editSocials, [platform]: text })}
-                      placeholder="URL"
-                      placeholderTextColor="#525252"
-                    />
-                    <TouchableOpacity
-                      onPress={() => {
-                        const next = { ...editSocials };
-                        delete next[platform];
-                        setEditSocials(next);
-                      }}
-                      style={styles.removeSocialBtn}
-                    >
-                      <X size={16} color="#FF4500" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                {isAddingSocial ? (
-                  <View style={styles.socialInputRow}>
-                    <TextInput
-                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                      value={newSocialUrl}
-                      onChangeText={setNewSocialUrl}
-                      placeholder="Enter social profile URL"
-                      placeholderTextColor="#525252"
-                      autoFocus
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (newSocialUrl) {
-                          const url = newSocialUrl.toLowerCase();
-                          const platform = url.includes("instagram") ? "instagram" :
-                            url.includes("twitter") ? "twitter" :
-                              url.includes("letterboxd") ? "letterboxd" :
-                                url.includes("imdb") ? "imdb" : "link";
-
-                          // If platform already exists, find a unique key
-                          let key = platform;
-                          let counter = 1;
-                          while (editSocials[key]) {
-                            key = `${platform}_${counter}`;
-                            counter++;
-                          }
-
-                          setEditSocials({ ...editSocials, [key]: newSocialUrl });
-                          setNewSocialUrl("");
-                          setIsAddingSocial(false);
-                        } else {
-                          setIsAddingSocial(false);
-                        }
-                      }}
-                      style={styles.addLinkConfirmBtn}
-                    >
-                      <Check size={20} color="#10B981" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setIsAddingSocial(false)}
-                      style={styles.addLinkConfirmBtn}
-                    >
-                      <X size={20} color="#525252" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.addSocialButton}
-                    onPress={() => setIsAddingSocial(true)}
-                  >
-                    <PlusCircle size={14} color="#FF4500" style={{ marginRight: 8 }} />
-                    <Text style={styles.addSocialText}>Add social link</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleUpdateProfile}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.saveButtonText}>Apply Changes</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Share Profile Modal (QR) */}
-      <Modal
-        visible={shareModalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShareModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { alignItems: 'center', backgroundColor: '#111' }]}>
-            <View style={[styles.modalHeader, { width: '100%' }]}>
-              <Text style={styles.modalTitle}>Share Profile</Text>
-              <TouchableOpacity onPress={() => setShareModalVisible(false)}>
-                <X size={24} color="#525252" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.qrContainer}>
-              <QRCode
-                value={`${APP_URL}/u/${user?.username}`}
-                size={200}
-                backgroundColor="white"
-                color="black"
-                quietZone={10}
-              />
-            </View>
-
-            <Text style={styles.qrText}>Scan to view my collection</Text>
-
-            <TouchableOpacity
-              style={styles.copyLinkBtn}
-              onPress={async () => {
-                await Clipboard.setStringAsync(`${APP_URL}/u/${user?.username}`);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-            >
-              {copied ? <Check size={16} color="#10B981" /> : <Copy size={16} color="#FF4500" />}
-              <Text style={[styles.copyLinkText, copied && { color: "#10B981" }]}>
-                {copied ? "Link Copied" : `${APP_URL.replace('https://', '')}/u/${user?.username}`}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.saveButton, { width: '100%', marginTop: 20 }]}
-              onPress={handleShare}
-            >
-              <Share2 size={18} color="white" style={{ marginRight: 10 }} />
-              <Text style={styles.saveButtonText}>Share Profile</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Personal Info Modal */}
-      <Modal
-        visible={infoModalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setInfoModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Account Security</Text>
-              <TouchableOpacity onPress={() => setInfoModalVisible(false)}>
-                <X size={24} color="#525252" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Internal ID</Text>
-              <Text style={styles.infoValue}>#{user?.id}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Primary Email</Text>
-              <Text style={styles.infoValue}>{user?.email}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Account Status</Text>
-              <View style={styles.activeBadge}>
-                <View style={styles.activeDot} />
-                <Text style={styles.activeText}>VERIFIED</Text>
-              </View>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Session Started</Text>
-              <Text style={styles.infoValue}>{new Date().toLocaleTimeString()}</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.saveButton, { marginTop: 20, backgroundColor: "#171717" }]}
-              onPress={() => setInfoModalVisible(false)}
-            >
-              <Text style={styles.saveButtonText}>Dismiss</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Refactored Modals */}
+      <EditProfileModal visible={editModalVisible} onClose={() => setEditModalVisible(false)} />
+      <ShareProfileModal visible={shareModalVisible} onClose={() => setShareModalVisible(false)} user={user} />
+      <AccountInfoModal visible={infoModalVisible} onClose={() => setInfoModalVisible(false)} user={user} />
     </SafeAreaView>
   );
 }
@@ -1122,127 +800,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#111111",
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    padding: 30,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  modalTitle: {
-    color: "white",
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    color: "#737373",
-    fontSize: 10,
-    fontWeight: "900",
-    marginBottom: 10,
-    letterSpacing: 1.5,
-  },
-  input: {
-    backgroundColor: "#050505",
-    borderRadius: 10,
-    padding: 18,
-    color: "white",
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.04)",
-  },
-  socialInputGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  socialIconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  socialInput: {
-    flex: 1,
-    backgroundColor: "#050505",
-    borderRadius: 16,
-    padding: 16,
-    color: "white",
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.04)",
-  },
-  socialEditSection: {
-    marginTop: 10,
-  },
-  socialInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  socialPlatformLabel: {
-    width: 100,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    paddingHorizontal: 10,
-    paddingVertical: 18,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  socialPlatformText: {
-    color: '#a3a3a3',
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  removeSocialBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 69, 0, 0.05)',
-    borderRadius: 10,
-  },
-  addLinkConfirmBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 10,
-  },
-  saveButton: {
-    backgroundColor: "#FF4500",
-    borderRadius: 10,
-    paddingVertical: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    shadowColor: "#FF4500",
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
   favToggle: {
     position: 'absolute',
     top: 8,
@@ -1264,93 +821,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 4,
   },
-  addSocialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 69, 0, 0.05)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 69, 0, 0.1)',
-  },
-  addSocialText: {
-    color: '#FF4500',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  saveButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  qrContainer: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 30,
-    marginBottom: 20,
-  },
-  qrText: {
-    color: "#525252",
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 24,
-  },
-  copyLinkBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(255,255,255,0.03)",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
-  },
-  copyLinkText: {
-    color: "#FF4500",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.02)",
-  },
-  infoLabel: {
-    color: "#525252",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  infoValue: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  activeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#10B981",
-  },
-  activeText: {
-    color: "#10B981",
-    fontSize: 10,
-    fontWeight: "900",
-  },
+  // Modal styles moved to respective components
   genrePickerContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
