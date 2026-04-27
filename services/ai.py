@@ -22,7 +22,7 @@ load_dotenv()
 logger              =   logging.getLogger(__name__)
 
 def mask_sensitive(text: str) -> str:
-    """Fix 6.5: Redact potential API keys from logs."""
+    """Redact potential API keys from logs."""
     if not text: return ""
     for key in parse_keys("GEMINI_API_KEY") + parse_keys("GROQ_API_KEY") + [os.getenv("API_KEY", "")]:
         if key and len(key) > 5:

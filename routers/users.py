@@ -118,7 +118,7 @@ async def register(response: Response, request: Request, user: UserScheme):
                 raise HTTPException(status_code=400, detail="This email is already registered.")
         raise HTTPException(status_code=500, detail="Registration failed. Please try again.")
     
-    # Fix 8.1: Set cookie on registration
+    # Set cookie on registration
     access_token = create_access_token(data={"sub": user.username})
     response.set_cookie(
         key="access_token",

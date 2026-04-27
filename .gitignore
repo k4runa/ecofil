@@ -36,6 +36,7 @@ venv/
 database/*.db
 database/*.sqlite
 database/*.sqlite3
+*.db
 
 # --- Environment & Secrets ---
 .env

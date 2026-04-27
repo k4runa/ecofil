@@ -24,7 +24,7 @@ async def get_similar_minds(request: Request, current_user: dict = Depends(get_c
     Returns pre-calculated similarity scores and reasons.
     """
     user_id = current_user["id"]
-    # Recalculate similarities in the background (Fixed 4.5)
+    # Recalculate similarities in the background
     asyncio.create_task(social_manager.recalculate_user_similarity(user_id))
 
     matches = await social_manager.get_similar_users(user_id)   #type: ignore

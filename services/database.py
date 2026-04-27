@@ -783,7 +783,7 @@ class UserManager:
     @transaction
     async def get_user_by_id(self, session: AsyncSession, id: int) -> dict:
         """
-        Retrieve a single user record by primary key (Fixed 5.2: Filters deleted).
+        Retrieve a single user record by primary key
         """
         stmt            =   select(User).where(User.id == id, User.is_deleted == False)
         result          =   await session.execute(stmt)
@@ -866,8 +866,7 @@ class UserManager:
         if f_lower in {"password", "email", "username"}:
             if not current_password:
                 raise ValueError("Current password is required to change this setting.")
-
-            # Verify current password (offloaded to threadpool to avoid blocking event loop)
+            
             stored_hash = user.password.encode("utf-8")
             if not await run_in_threadpool(bcrypt.checkpw, current_password.encode("utf-8"), stored_hash):
                 logger.warning(f"Failed password verification for user {username}")
@@ -887,23 +886,23 @@ class UserManager:
                     raise ValueError("New username must be different from your current one.")
 
         if f_lower == "password":
-            hashed                  =   await run_in_threadpool(bcrypt.hashpw, value.encode("utf-8"), bcrypt.gensalt())
+            hashed = await run_in_threadpool(bcrypt.hashpw, value.encode("utf-8"), bcrypt.gensalt())
             setattr(user, "password", hashed.decode("utf-8"))
             return True
 
         if f_lower == "ai_enabled":
-            bool_value              =   str(value).lower() in ("true", "1", "yes", "t")
+            bool_value = str(value).lower() in ("true", "1", "yes", "t")
             setattr(user, "ai_enabled", bool_value)
             return True
 
         if f_lower == "eco_recommendations_enabled":
-            bool_value              =   str(value).lower() in ("true", "1", "yes", "t")
+            bool_value = str(value).lower() in ("true", "1", "yes", "t")
             setattr(user, "eco_recommendations_enabled", bool_value)
             return True
 
         if f_lower == "max_toasts":
             try:
-                val                 =   int(value)
+                val = int(value)
                 if val < 1 or val > 20:
                     raise ValueError("Max toasts must be between 1 and 20.")
                 
@@ -1684,7 +1683,7 @@ class SocialManager:
             )
         
         from sqlalchemy.orm import joinedload
-        # Fix 5.4: Use joinedload for user1/user2 to avoid N+1
+        # Use joinedload for user1/user2 to avoid N+1
         stmt = stmt.options(joinedload(Conversation.user1), joinedload(Conversation.user2)).offset(skip).limit(limit)
         res = await session.execute(stmt)
         convs = res.scalars().all()
@@ -1745,7 +1744,7 @@ class SocialManager:
             unread_res = await session.execute(unread_stmt)
             unread_count = unread_res.scalar() or 0
             
-            # Fix 5.4: Use joined participant info from joinedload
+            # Use joined participant info from joinedload
             participant = c.user2 if c.user1_id == user_id else c.user1
             
             if not participant: continue

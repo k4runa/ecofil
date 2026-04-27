@@ -48,7 +48,7 @@ class AsyncCache:
                         del self._events[key]
         else:
             try:
-                # Fix 6.4: Added timeout to prevent hanging if fetch_func never completes
+                # Added timeout to prevent hanging if fetch_func never completes
                 await asyncio.wait_for(event.wait(), timeout=15.0)
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout waiting for cache key: {key}. Falling back to direct fetch.")
