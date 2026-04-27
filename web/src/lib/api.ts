@@ -97,4 +97,10 @@ export const socialApi = {
   updatePrivacy: (isPrivate: boolean) => api.patch('/social/privacy', { is_private: isPrivate }),
 };
 
+export const notificationsApi = {
+  getNotifications: () => api.get('/notifications'),
+  getUnreadCount: () => api.get('/notifications/unread/count'),
+  markAsRead: (id?: number) => api.patch(`/notifications/read${id ? `?notification_id=${id}` : ''}`),
+};
+
 export default api;

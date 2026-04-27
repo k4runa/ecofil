@@ -10,7 +10,9 @@ import {
   User,
   Star,
   Users,
-  Mail
+  Mail,
+  Search,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFullUrl } from "@/lib/api";
@@ -60,6 +62,14 @@ export const CollapsibleSidebar = ({
           open={open}
         />
         <Option
+          Icon={Search}
+          title="Search"
+          id="search"
+          selected={activeTab}
+          setSelected={setActiveTab}
+          open={open}
+        />
+        <Option
           Icon={Users}
           title="Similar Minds"
           id="social"
@@ -80,6 +90,14 @@ export const CollapsibleSidebar = ({
           Icon={Star}
           title="Favorites"
           id="favorites"
+          selected={activeTab}
+          setSelected={setActiveTab}
+          open={open}
+        />
+        <Option
+          Icon={Bell}
+          title="Notifications"
+          id="notifications"
           selected={activeTab}
           setSelected={setActiveTab}
           open={open}

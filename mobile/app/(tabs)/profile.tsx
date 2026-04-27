@@ -328,27 +328,6 @@ export default function ProfileScreen() {
               <Text style={styles.bioText} numberOfLines={3}>{user.bio}</Text>
             )}
 
-            {/* Actionable Social Badges */}
-            {/* {user?.social_links && Object.keys(user.social_links).length > 0 && (
-              <View style={styles.socialBadges}>
-                {Object.entries(user.social_links).map(([platform, username]) => {
-                  const config = SOCIAL_PLATFORMS[platform];
-                  if (!config || !username) return null;
-                  const Icon = config.icon || LinkIcon;
-                  return (
-                    <TouchableOpacity
-                      key={platform}
-                      style={[styles.socialBadge, { borderColor: `${config.color}30` }]}
-                      onPress={() => openSocialLink(platform, username as string)}
-                    >
-                      <Icon size={14} color={config.color} />
-                      <Text style={styles.socialBadgeText}>{username}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}*/}
-
             <View style={styles.profileActions}>
               <TouchableOpacity
                 style={styles.editProfileButton}

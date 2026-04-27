@@ -19,7 +19,6 @@ router = APIRouter(prefix="/movies", tags=["Movies"])
 
 
 @router.get("/all/trending")
-@router.get("/all/trending/")
 @limiter.limit("20/minute")
 async def get_trending_movies(request: Request, limit: int = 20, current_user: dict = Depends(get_current_user)):
     """
@@ -141,7 +140,6 @@ async def search_movies(
 
 
 @router.get("/filter-by-release-date")
-@router.get("/filter-by-release-date/")
 @limiter.limit("20/minute")
 async def get_movies_filter_by_release_date(request: Request, current_user: dict = Depends(get_current_user)):
     """
@@ -153,7 +151,6 @@ async def get_movies_filter_by_release_date(request: Request, current_user: dict
 
 
 @router.get("/filter-by-added-date")
-@router.get("/filter-by-added-date/")
 @limiter.limit("20/minute")
 async def get_movies_filter_by_added_date(request: Request, current_user: dict = Depends(get_current_user)):
     """
@@ -166,7 +163,6 @@ async def get_movies_filter_by_added_date(request: Request, current_user: dict =
 
 
 @router.get("/filter-by-rating/{rating}")
-@router.get("/filter-by-rating/{rating}/")
 @limiter.limit("20/minute")
 async def get_movies_filter_by_rating(request: Request, rating: int, current_user: dict = Depends(get_current_user)):
     """

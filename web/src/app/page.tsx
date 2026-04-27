@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useAuthStore, useDashboardStore } from "@/lib/store";
 import { AuthForm } from "@/components/auth/auth-form";
 import { VercelV0Chat } from "@/components/chat/v0-ai-chat";
-import { MovieDashboard } from "@/components/movies/dashboard";
-import { MovieSearch } from "@/components/movies/movie-search";
-import { RecommendationsDashboard } from "@/components/movies/recommendations";
-import { FavoritesDashboard } from "@/components/movies/favorites-dashboard";
-import { SimilarMindsDashboard } from "@/components/social/similar-minds-dashboard";
-import { MessagesDashboard } from "@/components/social/messages-dashboard";
+import dynamic from "next/dynamic";
+
+const MovieDashboard = dynamic(() => import("@/components/movies/dashboard").then(mod => mod.MovieDashboard));
+const RecommendationsDashboard = dynamic(() => import("@/components/movies/recommendations").then(mod => mod.RecommendationsDashboard));
+const FavoritesDashboard = dynamic(() => import("@/components/movies/favorites-dashboard").then(mod => mod.FavoritesDashboard));
+const SimilarMindsDashboard = dynamic(() => import("@/components/social/similar-minds-dashboard").then(mod => mod.SimilarMindsDashboard));
+const MessagesDashboard = dynamic(() => import("@/components/social/messages-dashboard").then(mod => mod.MessagesDashboard));
+const NotificationsDashboard = dynamic(() => import("@/components/notifications/notifications-dashboard").then(mod => mod.NotificationsDashboard));
+const SearchDashboard = dynamic(() => import("@/components/movies/movie-search").then(mod => mod.MovieSearch));
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -109,8 +112,8 @@ export default function Home() {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 left-0 z-[60] w-72 md:hidden"
           >
-            <CollapsibleSidebar 
-              activeTab={activeTab} 
+            <CollapsibleSidebar
+              activeTab={activeTab}
               setActiveTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }}
               logout={logout}
               user={user}
@@ -122,8 +125,8 @@ export default function Home() {
 
       {/* Desktop Collapsible Sidebar */}
       <div className="hidden md:block">
-        <CollapsibleSidebar 
-          activeTab={activeTab} 
+        <CollapsibleSidebar
+          activeTab={activeTab}
           setActiveTab={setActiveTab}
           logout={logout}
           user={user}
@@ -134,10 +137,10 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-transparent">
         {/* Top Header */}
-        <Header 
-          user={user} 
-          onOpenSidebar={() => setIsSidebarOpen(true)} 
-          onOpenSettings={() => setActiveTab("settings")} 
+        <Header
+          user={user}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+          onOpenSettings={() => setActiveTab("settings")}
         />
 
         {/* Scrollable Content */}
@@ -163,6 +166,20 @@ export default function Home() {
                         </p>
                       </div>
                       <MovieDashboard />
+                    </div>
+                  )}
+
+                  {activeTab === "search" && (
+                    <div className="space-y-8">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-4xl font-black tracking-tighter">
+                          Explore
+                        </h3>
+                        <p className="text-muted-foreground font-medium">
+                          Search for movies, TV shows, and anime.
+                        </p>
+                      </div>
+                      <SearchDashboard />
                     </div>
                   )}
 
@@ -211,6 +228,20 @@ export default function Home() {
                   {activeTab === "favorites" && (
                     <div className="space-y-8">
                       <FavoritesDashboard />
+                    </div>
+                  )}
+
+                  {activeTab === "notifications" && (
+                    <div className="space-y-8">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-4xl font-black tracking-tighter">
+                          Notifications
+                        </h3>
+                        <p className="text-muted-foreground font-medium">
+                          Stay updated with your cinematic world.
+                        </p>
+                      </div>
+                      <NotificationsDashboard />
                     </div>
                   )}
 
