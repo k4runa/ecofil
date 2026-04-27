@@ -1,0 +1,25 @@
+{
+  "cli": {
+    "version": ">= 12.6.4",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "image": "auto"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.8:8001"
+      }
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
