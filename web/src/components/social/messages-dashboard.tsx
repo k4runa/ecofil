@@ -238,24 +238,23 @@ export const MessagesDashboard = () => {
         "w-full md:w-80 border-r border-border flex flex-col bg-accent/10",
         activeChatId ? "hidden md:flex" : "flex"
       )}>
-        <div className="p-6 border-b border-border space-y-4">
-          {/* Status Tabs */}
-          <div className="flex border-b border-border gap-6 px-2">
+        <div className="p-8 border-b border-white/5 space-y-6 bg-zinc-900/20">
+          <div className="flex border-b border-white/5 gap-8 px-2">
             <button
               onClick={() => {
                 if (activeStatus === "ACCEPTED") return;
                 setActiveStatus("ACCEPTED");
                 setActiveChatId(null);
                 setConversations([]);
-                setLoading(true); // Trigger spinner for clean state on explicit switch
+                setLoading(true);
               }}
               className={cn(
-                "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                activeStatus === "ACCEPTED" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                "pb-4 text-[10px] font-bold uppercase tracking-[0.3em] transition-all relative",
+                activeStatus === "ACCEPTED" ? "text-white" : "text-zinc-600 hover:text-zinc-400"
               )}
             >
               Inbox
-              {activeStatus === "ACCEPTED" && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              {activeStatus === "ACCEPTED" && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-px bg-white" />}
             </button>
             <button
               onClick={() => {
@@ -266,14 +265,14 @@ export const MessagesDashboard = () => {
                 setLoading(true);
               }}
               className={cn(
-                "pb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
-                activeStatus === "PENDING" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                "pb-4 text-[10px] font-bold uppercase tracking-[0.3em] transition-all relative",
+                activeStatus === "PENDING" ? "text-white" : "text-zinc-600 hover:text-zinc-400"
               )}
             >
               Requests
-              {activeStatus === "PENDING" && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+              {activeStatus === "PENDING" && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-px bg-white" />}
               {requestCount > 0 && (
-                <span className="absolute -top-1 -right-4 size-4 bg-primary text-primary-foreground text-[8px] flex items-center justify-center rounded-full">
+                <span className="absolute -top-1 -right-4 size-4 bg-white text-black text-[8px] font-bold flex items-center justify-center rounded-full">
                   {requestCount}
                 </span>
               )}
@@ -281,23 +280,23 @@ export const MessagesDashboard = () => {
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-2xl text-xs font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-zinc-900/50 border border-white/5 rounded-2xl text-xs font-medium focus:ring-1 focus:ring-white/20 outline-none transition-all placeholder:text-zinc-700"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
           {filteredConversations.length === 0 ? (
-            <div className="text-center py-10 px-6">
-              <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                {activeStatus === "PENDING" ? "No message requests" : "No conversations"}
+            <div className="text-center py-20 px-6">
+              <MessageSquare className="w-10 h-10 text-zinc-900 mx-auto mb-4" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-700">
+                {activeStatus === "PENDING" ? "No message requests" : "Empty Inbox"}
               </p>
             </div>
           ) : (
@@ -306,14 +305,14 @@ export const MessagesDashboard = () => {
                 key={conv.participant.id}
                 onClick={() => setActiveChatId(conv.participant.id)}
                 className={cn(
-                  "p-4 cursor-pointer transition-all border border-transparent",
+                  "p-4 cursor-pointer transition-all rounded-[1.5rem] flex items-center gap-4",
                   activeChatId === conv.participant.id
-                    ? "bg-accent/50 border-border"
-                    : "hover:bg-accent/30 hover:border-border/50 hover:-translate-y-0.5"
+                    ? "bg-white/5 border border-white/10 shadow-xl"
+                    : "hover:bg-white/[0.02] border border-transparent"
                 )}
               >
-                <div className="relative">
-                  <div className="size-12 rounded bg-gradient-to-br from-primary/20 to-primary/5 border border-border overflow-hidden flex items-center justify-center text-primary font-black uppercase">
+                <div className="relative shrink-0">
+                  <div className="size-12 rounded-2xl bg-zinc-900 border border-white/5 overflow-hidden flex items-center justify-center text-zinc-500 font-bold uppercase">
                     {conv.participant.avatar_url ? (
                       <img src={getFullUrl(conv.participant.avatar_url)} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -321,23 +320,23 @@ export const MessagesDashboard = () => {
                     )}
                   </div>
                   {conv.unread_count > 0 && (
-                    <div className="absolute -top-1 -right-1 size-5 bg-primary text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-card animate-in zoom-in">
+                    <div className="absolute -top-1 -right-1 size-5 bg-white text-black text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-zinc-950 animate-in zoom-in">
                       {conv.unread_count}
                     </div>
                   )}
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                  <div className="flex justify-between items-start mb-0.5">
-                    <span className="text-xs font-black tracking-tight truncate">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-xs font-bold tracking-tight truncate text-zinc-200">
                       {conv.participant.nickname || conv.participant.username}
                     </span>
-                    <span className="text-[9px] font-medium text-muted-foreground whitespace-nowrap ml-2">
+                    <span className="text-[9px] font-medium text-zinc-600 whitespace-nowrap ml-2">
                       {conv.last_message && getTimeAgo(conv.last_message.created_at)}
                     </span>
                   </div>
                   <p className={cn(
-                    "text-[10px] truncate",
-                    conv.unread_count > 0 ? "text-foreground font-bold" : "text-muted-foreground font-medium"
+                    "text-[11px] truncate leading-none",
+                    conv.unread_count > 0 ? "text-white font-bold" : "text-zinc-500 font-medium"
                   )}>
                     {conv.last_message ? (
                       <>
@@ -453,39 +452,37 @@ export const MessagesDashboard = () => {
                           }
                         }}
                         className={cn(
-                          "px-4 py-2.5 rounded-2xl text-xs font-medium shadow-sm relative group cursor-default transition-all",
+                          "px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed relative group cursor-default transition-all shadow-sm",
                           isOwn
-                            ? "bg-primary text-primary-foreground rounded-tr-none hover:brightness-110"
-                            : "bg-card border border-border text-foreground rounded-tl-none"
+                            ? "bg-white text-black font-semibold rounded-tr-none hover:bg-zinc-100"
+                            : "bg-zinc-900 border border-zinc-800/50 text-zinc-100 rounded-tl-none hover:bg-zinc-800/80"
                         )}
                       >
                         {isEditing ? (
-                          <div className="flex flex-col gap-2 min-w-[150px]">
+                          <div className="flex flex-col gap-2 min-w-[200px]">
                             <textarea
                               value={editContent}
                               onChange={(e) => setEditContent(e.target.value)}
-                              className="bg-transparent border-none outline-none text-xs w-full resize-none p-0 text-primary-foreground placeholder:text-primary-foreground/50 leading-relaxed font-medium"
+                              className="bg-transparent border-none outline-none text-[13px] w-full resize-none p-0 text-black placeholder:text-black/50 leading-relaxed font-semibold"
                               rows={Math.max(1, editContent.split('\n').length)}
                               autoFocus
                             />
-                            <div className="flex justify-end gap-1 mt-1 pt-1 border-t border-primary-foreground/20">
-                              <button onClick={() => setEditingId(null)} className="p-1 hover:bg-black/10 rounded-md transition-colors">
-                                <X className="size-3" />
+                            <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-black/10">
+                              <button onClick={() => setEditingId(null)} className="p-1 hover:bg-black/10 rounded-md transition-colors text-black/60">
+                                <X className="size-3.5" />
                               </button>
-                              <button onClick={() => handleEditMessage(msg.id)} className="p-1 hover:bg-black/10 rounded-md transition-colors">
-                                <Check className="size-3" />
+                              <button onClick={() => handleEditMessage(msg.id)} className="p-1 hover:bg-black/10 rounded-md transition-colors text-black">
+                                <Check className="size-3.5" />
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <>
-                            {msg.content}
-                          </>
+                          msg.content
                         )}
 
                         {isOwn && idx === messages.length - 1 && (
-                          <div className="absolute -bottom-5 right-1 flex items-center gap-1 opacity-50">
-                            <span className="text-[8px] font-black uppercase tracking-widest">
+                          <div className="absolute -bottom-5 right-0 flex items-center gap-1 opacity-40">
+                            <span className="text-[8px] font-bold uppercase tracking-tighter">
                               {msg.is_read ? "Read" : "Sent"}
                             </span>
                           </div>

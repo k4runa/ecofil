@@ -133,9 +133,9 @@ export function RecommendationsDashboard() {
                   className="w-full h-full object-cover transition-all"
                 />
 
-                <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
-                  <Star className="w-3.5 h-3.5 fill-yellow-500" />
-                  {movie.vote_average || movie.rating || "0.0"}
+                <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-white shadow-xl">
+                  <Star className="w-3.5 h-3.5 fill-white" />
+                  {movie.primary_rating?.value?.toFixed(1) || movie.vote_average?.toFixed(1) || "0.0"}
                 </div>
 
                 <div className="absolute bottom-3 right-3">

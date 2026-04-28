@@ -3,50 +3,23 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
-import { MovieSearch } from '@/components/movies/movie-search';
-import { User as UserIcon, Settings, Menu } from 'lucide-react';
+import { User as UserIcon, Settings, Menu, Search } from 'lucide-react';
+import { useDashboardStore } from '@/lib/store';
+import { QuickSearch } from './quick-search';
 
-export function Header({ 
-  user, 
-  onOpenSidebar, 
-  onOpenSettings 
-}: { 
-  user: any, 
-  onOpenSidebar: () => void, 
-  onOpenSettings: () => void 
+export function Header({
+	user,
+	onOpenSidebar,
+	onOpenSettings,
+	onOpenSearch
+}: {
+	user: any,
+	onOpenSidebar: () => void,
+	onOpenSettings: () => void,
+	onOpenSearch: () => void
 }) {
 	const [open, setOpen] = React.useState(false);
 	const scrolled = useScroll(10);
-
-	const links = [
-		{
-			label: 'Features',
-			href: '#',
-		},
-		{
-			label: 'Pricing',
-			href: '#',
-		},
-		{
-			label: 'About',
-			href: '#',
-		},
-	];
-
-	React.useEffect(() => {
-		if (open) {
-			// Disable scroll
-			document.body.style.overflow = 'hidden';
-		} else {
-			// Re-enable scroll
-			document.body.style.overflow = '';
-		}
-
-		// Cleanup when component unmounts
-		return () => {
-			document.body.style.overflow = '';
-		};
-	}, [open]);
 
 	return (
 		<header
@@ -70,23 +43,22 @@ export function Header({
 				<div className="flex items-center gap-2">
 					<button
 						onClick={onOpenSidebar}
-						className="md:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-xl transition-colors"
+						className="md:hidden p-2 text-muted-foreground hover:text-foreground hover:bg-zinc-800 rounded-xl transition-colors"
 					>
 						<Menu className="w-5 h-5" />
 					</button>
-					<h1 className="text-lg font-black tracking-tighter text-primary md:hidden">ecofil</h1>
-					<h1 className="text-xl font-black tracking-tighter text-primary hidden md:block">ecofil</h1>
+					<h1 className="text-lg font-black tracking-tighter text-foreground md:hidden">ecofil</h1>
+					<h1 className="text-xl font-black tracking-tighter text-foreground hidden md:block">ecofil</h1>
 				</div>
 
 				<div className="hidden md:flex flex-1 justify-center max-w-md mx-4">
-					<MovieSearch />
+					<QuickSearch />
 				</div>
 
 				<div className="flex items-center gap-3">
-
 					<button
 						onClick={onOpenSettings}
-						className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-xl transition-colors"
+						className="p-2 text-muted-foreground hover:text-foreground hover:bg-zinc-800 rounded-xl transition-all"
 					>
 						<Settings className="w-4 h-4" />
 					</button>
@@ -111,10 +83,16 @@ export function Header({
 					)}
 				>
 					<div className="space-y-4">
-						<label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Quick Search</label>
-						<MovieSearch />
+						<label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Quick Discovery</label>
+						<button
+							onClick={() => { onOpenSearch(); setOpen(false); }}
+							className="w-full flex items-center gap-3 px-4 py-4 bg-zinc-900/50 border border-white/5 rounded-2xl text-zinc-400 hover:text-white transition-all text-sm font-bold"
+						>
+							<Search className="w-5 h-5" />
+							<span>Explore the library</span>
+						</button>
 					</div>
-					
+
 					<div className="pt-4 border-t border-border/50">
 						<div className="flex items-center gap-4 mb-6">
 							<div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">

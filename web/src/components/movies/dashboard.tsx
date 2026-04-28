@@ -130,12 +130,12 @@ export function MovieDashboard() {
                       }`}
                       title={movie.is_favorite ? "Remove from favorites" : "Add to favorites"}
                     >
-                      <Star className={`w-4 h-4 ${movie.is_favorite ? "fill-white" : ""}`} />
+                      <Star className={`w-4 h-4 ${movie.is_favorite ? "fill-background" : ""}`} />
                     </button>
                   </div>
 
-                  <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-yellow-500 shadow-xl">
-                    <Star className="w-3.5 h-3.5 fill-yellow-500" />
+                  <div className="absolute top-3 right-3 bg-background/60 md:backdrop-blur-xl border border-border/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-white shadow-xl">
+                    <Star className="w-3.5 h-3.5 fill-white" />
                     {movie.vote_average || movie.rating || "0.0"}
                   </div>
 

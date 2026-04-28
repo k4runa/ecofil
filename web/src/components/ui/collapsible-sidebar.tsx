@@ -141,12 +141,12 @@ const Option = ({ Icon, title, id, selected, setSelected, open, badgeCount }: an
       className={cn(
         "relative flex h-11 w-full items-center rounded-lg transition-all duration-200 mb-1",
         isSelected
-          ? "bg-card text-foreground border border-border shadow-md"
-          : "text-muted-foreground hover:bg-card hover:text-foreground"
+          ? "bg-white/5 text-white border border-white/10 shadow-lg"
+          : "text-zinc-500 hover:bg-white/[0.02] hover:text-white"
       )}
     >
       <div className="grid h-full w-14 place-content-center relative">
-        <Icon className={cn("h-4 w-4", isSelected ? "text-foreground" : "text-muted-foreground")} />
+        <Icon className={cn("h-4 w-4 transition-colors", isSelected ? "text-white" : "text-zinc-500")} />
         {badgeCount > 0 && (
           <div className="absolute top-2 right-3 size-2 bg-primary rounded-full border border-background shadow-sm animate-pulse" />
         )}

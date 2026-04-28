@@ -68,12 +68,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000").split(",")
+        origins_space = " ".join([o.strip() for o in allowed_origins if o.strip()])
+        
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; "
             "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; "
-            "img-src 'self' https://image.tmdb.org https://images.placeholders.dev https://res.cloudinary.com https://api.dicebear.com data: blob:; "
-            "connect-src 'self' https://api.themoviedb.org https://accounts.google.com/gsi/; "
+            f"img-src 'self' {origins_space} https://image.tmdb.org https://s4.anilist.co https://images.placeholders.dev https://res.cloudinary.com https://api.dicebear.com data: blob:; "
+            f"connect-src 'self' {origins_space} https://api.themoviedb.org https://accounts.google.com/gsi/; "
             "font-src 'self' https://fonts.gstatic.com; "
             "frame-src https://accounts.google.com/gsi/; "
             "frame-ancestors 'none'"

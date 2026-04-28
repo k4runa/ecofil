@@ -6,13 +6,13 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { VercelV0Chat } from "@/components/chat/v0-ai-chat";
 import dynamic from "next/dynamic";
 
-const MovieDashboard = dynamic(() => import("@/components/movies/dashboard").then(mod => mod.MovieDashboard));
-const RecommendationsDashboard = dynamic(() => import("@/components/movies/recommendations").then(mod => mod.RecommendationsDashboard));
-const FavoritesDashboard = dynamic(() => import("@/components/movies/favorites-dashboard").then(mod => mod.FavoritesDashboard));
-const SimilarMindsDashboard = dynamic(() => import("@/components/social/similar-minds-dashboard").then(mod => mod.SimilarMindsDashboard));
-const MessagesDashboard = dynamic(() => import("@/components/social/messages-dashboard").then(mod => mod.MessagesDashboard));
-const NotificationsDashboard = dynamic(() => import("@/components/notifications/notifications-dashboard").then(mod => mod.NotificationsDashboard));
-const SearchDashboard = dynamic(() => import("@/components/movies/movie-search").then(mod => mod.MovieSearch));
+const MovieDashboard = dynamic(() => import("@/components/movies/dashboard").then(mod => mod.MovieDashboard), { ssr: false });
+const RecommendationsDashboard = dynamic(() => import("@/components/movies/recommendations").then(mod => mod.RecommendationsDashboard), { ssr: false });
+const FavoritesDashboard = dynamic(() => import("@/components/movies/favorites-dashboard").then(mod => mod.FavoritesDashboard), { ssr: false });
+const SimilarMindsDashboard = dynamic(() => import("@/components/social/similar-minds-dashboard").then(mod => mod.SimilarMindsDashboard), { ssr: false });
+const MessagesDashboard = dynamic(() => import("@/components/social/messages-dashboard").then(mod => mod.MessagesDashboard), { ssr: false });
+const NotificationsDashboard = dynamic(() => import("@/components/notifications/notifications-dashboard").then(mod => mod.NotificationsDashboard), { ssr: false });
+const SearchDashboard = dynamic(() => import("@/components/movies/movie-search").then(mod => mod.MovieSearch), { ssr: false });
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -34,8 +34,12 @@ import { CollapsibleSidebar } from "@/components/ui/collapsible-sidebar";
 
 
 export default function Home() {
-  const { isAuthenticated, user, isLoading, checkAuth, logout } =
-    useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { activeTab, setActiveTab } = useDashboardStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -51,8 +55,9 @@ export default function Home() {
   ];
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    // Only perform non-silent check if not authenticated yet
+    checkAuth(isAuthenticated);
+  }, [checkAuth, isAuthenticated]);
 
   useEffect(() => {
     if (isChatOpen) {
@@ -141,6 +146,7 @@ export default function Home() {
           user={user}
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onOpenSettings={() => setActiveTab("settings")}
+          onOpenSearch={() => setActiveTab("search")}
         />
 
         {/* Scrollable Content */}
@@ -170,17 +176,7 @@ export default function Home() {
                   )}
 
                   {activeTab === "search" && (
-                    <div className="space-y-8">
-                      <div className="flex flex-col gap-2">
-                        <h3 className="text-4xl font-black tracking-tighter">
-                          Explore
-                        </h3>
-                        <p className="text-muted-foreground font-medium">
-                          Search for movies, TV shows, and anime.
-                        </p>
-                      </div>
-                      <SearchDashboard />
-                    </div>
+                    <SearchDashboard />
                   )}
 
                   {activeTab === "recommendations" && (

@@ -1,34 +1,39 @@
 # ecofil
 
-<p align="center">
-  <img src="./.images/hero.png" alt="ecofil Hero" width="100%" />
-</p>
+ecofil is a high-performance, AI-powered movie tracking and social ecosystem. Built with a focus on aesthetic excellence and intelligent discovery, it helps users manage their cinematic journey through personalized AI insights and a secure, modern platform.
 
-ecofil is a movie tracking and recommendation system built with FastAPI and Next.js. It features a personalized AI assistant that provides movie suggestions based on your library and preferences.
+## App Status
+
+| Platform | Status | Version |
+| :--- | :--- | :--- |
+| **Web Dashboard** | Stable / Feature Complete | 1.0.0 |
+| **Mobile App (iOS/Android)** | In Development (Expo) | 0.8.5 |
 
 ## Features
 
-- **Movie Tracking:** Manage your library of movies, anime, and shows with simple tracking tools.
-- **AI Recommendations:** A personalized assistant that analyzes your taste and explains why certain movies are suggested.
-- **Social Features:** Connect with users who have similar tastes, and communicate through a real-time messaging system.
-
-<p align="center">
-  <img src="./.images/eco-ai.png" alt="Eco AI" width="32%" />
-  <img src="./.images/daily-picks.png" alt="Daily Picks" width="32%" />
-  <img src="./.images/my-collections.png" alt="Collections" width="32%" />
-</p>
-
-- **Privacy Focused:** Control what information is visible on your profile, including your bio, age, location, and library.
-- **Clean Interface:** A high-contrast, professional dashboard designed for clarity and ease of use.
-- **Secure Backend:** Asynchronous FastAPI architecture with identity-based access control and secure authentication.
+- **Personalized AI Assistant:** Context-aware recommendations using Gemini/Llama-3 that explain *why* a movie fits your taste.
+- **Monochrome Premium UI:** A high-contrast, professional design system focused on content and clarity.
+- **Social Discovery:** Find "Similar Minds" and connect with users who share your cinematic DNA.
+- **Real-time Messaging:** Secure, instant communication between community members.
+- **Privacy First:** Fine-grained control over profile visibility and personal data.
 
 ## Tech Stack
 
-- **Backend:** FastAPI, Python 3.12+
-- **Database:** PostgreSQL 16+ (SQLAlchemy Async)
-- **Migrations:** Alembic
-- **Frontend:** Next.js, TypeScript, Tailwind CSS
-- **AI Integration:** Google Gemini, Groq (Llama-3)
+### Backend & Infrastructure
+- **Framework:** FastAPI (Asynchronous Python 3.12+)
+- **Database:** PostgreSQL 16 (SQLAlchemy Async + Alembic)
+- **Security:** JWT Auth, SlowAPI (Rate Limiting), Identity-based RBAC
+- **AI Intelligence:** Google Gemini Pro, Groq (Llama-3 70B)
+
+### Frontend (Web)
+- **Architecture:** Next.js 15 (App Router, Turbopack)
+- **Styling:** Tailwind CSS + Framer Motion (Premium Animations)
+- **State Management:** Zustand
+
+### Mobile (Active Dev)
+- **Framework:** React Native / Expo
+- **Navigation:** Expo Router (File-based)
+- **Experience:** Native-first smooth interactions and haptic feedback.
 
 ## Quick Start
 

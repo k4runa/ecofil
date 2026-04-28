@@ -54,21 +54,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await authApi.login(credentials);
       const { username, role } = res.data;
-      
+
       try {
         const userRes = await authApi.getMe();
-        set({ 
-          user: userRes.data?.data?.user || userRes.data, 
-          isAuthenticated: true, 
-          isLoading: false 
+        set({
+          user: userRes.data?.data?.user || userRes.data,
+          isAuthenticated: true,
+          isLoading: false
         });
       } catch (err) {
         console.warn("Profile fetch failed, using login response data", err);
         const { avatar_url } = res.data;
-        set({ 
-          user: { username, role, avatar_url }, 
-          isAuthenticated: true, 
-          isLoading: false 
+        set({
+          user: { username, role, avatar_url },
+          isAuthenticated: true,
+          isLoading: false
         });
       }
     } catch (err) {
@@ -82,21 +82,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await authApi.googleLogin(credential);
       const { username, role } = res.data;
-      
+
       try {
         const userRes = await authApi.getMe();
-        set({ 
-          user: userRes.data?.data?.user || userRes.data, 
-          isAuthenticated: true, 
-          isLoading: false 
+        set({
+          user: userRes.data?.data?.user || userRes.data,
+          isAuthenticated: true,
+          isLoading: false
         });
       } catch (err) {
         console.warn("Profile fetch failed, using login response data", err);
         const { avatar_url } = res.data;
-        set({ 
-          user: { username, role, avatar_url }, 
-          isAuthenticated: true, 
-          isLoading: false 
+        set({
+          user: { username, role, avatar_url },
+          isAuthenticated: true,
+          isLoading: false
         });
       }
     } catch (err) {
@@ -149,14 +149,18 @@ export const useSocialUIStore = create<SocialState>((set) => ({
 
 interface DashboardState {
   activeTab: string;
+  searchQuery: string;
   setActiveTab: (tab: string) => void;
+  setSearchQuery: (query: string) => void;
 }
 
 export const useDashboardStore = create<DashboardState>()(
   persist(
     (set) => ({
       activeTab: 'library',
+      searchQuery: '',
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
     }),
     {
       name: 'ecofil-dashboard-storage',

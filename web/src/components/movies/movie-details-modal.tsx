@@ -98,9 +98,9 @@ export function MovieDetailsModal({
                   <span className="px-3 py-1 bg-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-md border border-primary/20">
                     {movie.media_type || "Movie"}
                   </span>
-                  <div className="flex items-center gap-1 text-yellow-500 font-black text-sm">
-                    <Star className="w-4 h-4 fill-yellow-500" />
-                    <span>{movie.vote_average || movie.rating || "0.0"}</span>
+                  <div className="flex items-center gap-1 text-white font-black text-sm">
+                    <Star className="w-4 h-4 fill-white" />
+                    {movie.primary_rating?.value?.toFixed(1) || movie.vote_average?.toFixed(1) || "0.0"}
                   </div>
                 </div>
 
