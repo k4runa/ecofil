@@ -228,7 +228,7 @@ class User(Base):
     # --- Account lifecycle ---
     is_deleted:                     Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=False)
     is_private:                     Mapped[bool]                    =   mapped_column(Boolean, nullable=False, default=False)  # If true, won't show in 'Similar Minds'
-    eco_recommendations_enabled:     Mapped[bool]                   =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    eco_recommendations_enabled:    Mapped[bool]                   =   mapped_column(Boolean, nullable=False, default=True, server_default="true")
     created_at:                     Mapped[str]                     =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
     last_seen:                      Mapped[str]                     =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -303,20 +303,20 @@ class Message(Base):
     """
     __tablename__                                   =   "messages"
 
-    id:                 Mapped[int]                 =   mapped_column(primary_key=True)
-    sender_id:          Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    receiver_id:        Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    content:            Mapped[str]                 =   mapped_column(String, nullable=False)
-    is_read:            Mapped[bool]                =   mapped_column(Boolean, default=False)
-    message_type:       Mapped[str]                 =   mapped_column(String, default="text", server_default="text") # text, image, movie_recommendation
-    attachment_url:     Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
+    id:                  Mapped[int]                 =   mapped_column(primary_key=True)
+    sender_id:           Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    receiver_id:         Mapped[int]                 =   mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    content:             Mapped[str]                 =   mapped_column(String, nullable=False)
+    is_read:             Mapped[bool]                =   mapped_column(Boolean, default=False)
+    message_type:        Mapped[str]                 =   mapped_column(String, default="text", server_default="text") # text, image, movie_recommendation
+    attachment_url:      Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
     deleted_by_sender:   Mapped[bool]               =   mapped_column(Boolean, default=False, server_default="false")
     deleted_by_receiver: Mapped[bool]               =   mapped_column(Boolean, default=False, server_default="false")
-    is_edited:          Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
-    edited_at:          Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
-    created_at:         Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), index=True)
-    sender:             Mapped["User"]              =   relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
-    receiver:           Mapped["User"]              =   relationship("User", foreign_keys=[receiver_id], back_populates="received_messages")
+    is_edited:           Mapped[bool]                =   mapped_column(Boolean, default=False, server_default="false")
+    edited_at:           Mapped[Optional[str]]       =   mapped_column(String, nullable=True)
+    created_at:          Mapped[str]                 =   mapped_column(String, nullable=False, default=lambda: datetime.now(timezone.utc).isoformat(), index=True)
+    sender:              Mapped["User"]              =   relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
+    receiver:            Mapped["User"]              =   relationship("User", foreign_keys=[receiver_id], back_populates="received_messages")
 
 
 class Conversation(Base):

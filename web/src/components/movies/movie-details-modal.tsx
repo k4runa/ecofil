@@ -100,7 +100,7 @@ export function MovieDetailsModal({
                   </span>
                   <div className="flex items-center gap-1 text-white font-black text-sm">
                     <Star className="w-4 h-4 fill-white" />
-                    {movie.primary_rating?.value?.toFixed(1) || movie.vote_average?.toFixed(1) || "0.0"}
+                    {movie.primary_rating?.value ? Number(movie.primary_rating.value).toFixed(1) : movie.vote_average ? Number(movie.vote_average).toFixed(1) : "0.0"}
                   </div>
                 </div>
 

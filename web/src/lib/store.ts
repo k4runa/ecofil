@@ -106,12 +106,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    try {
+    if(!get().isAuthenticated && get().user === null) return;
+    try
+    {
       await authApi.logout();
-    } catch (err) {
+    }
+    catch(err){
       console.warn("Logout request failed, continuing local logout", err);
     }
-    set({ user: null, isAuthenticated: false, isLoading: false });
+    finally {
+      set({user: null, isAuthenticated : false, isLoading: false});
+    }
   },
 
   updateUser: (data: Partial<User>) => {

@@ -83,7 +83,7 @@ class MovieScheme(BaseModel):
     
     @model_validator(mode="after")
     def at_least_one_required(self):
-        if not self.tmdb_id and not self.query and not self.canonical_id:
+        if self.tmdb_id is None and self.query is None and self.canonical_id is None:
             raise ValueError("Either canonical_id, tmdb_id, or query must be provided.")
         return self
 
