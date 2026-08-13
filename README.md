@@ -14,7 +14,7 @@ ecofil is a high-performance, AI-powered movie tracking and social ecosystem. Bu
 - **Personalized AI Assistant:** Context-aware recommendations using Gemini/Llama-3 that explain *why* a movie fits your taste.
 - **Monochrome Premium UI:** A high-contrast, professional design system focused on content and clarity.
 - **Social Discovery:** Find "Similar Minds" and connect with users who share your cinematic DNA.
-- **Real-time Messaging:** Secure, instant communication between community members.
+- **Direct Messaging:** Private conversations with an inbox, message requests, and edit/delete support.
 - **Privacy First:** Fine-grained control over profile visibility and personal data.
 
 ## Tech Stack
@@ -22,6 +22,7 @@ ecofil is a high-performance, AI-powered movie tracking and social ecosystem. Bu
 ### Backend & Infrastructure
 - **Framework:** FastAPI (Asynchronous Python 3.12+)
 - **Database:** PostgreSQL 16 (SQLAlchemy Async + Alembic)
+- **Caching:** In-process async TTL cache with stampede protection (no external cache server)
 - **Security:** JWT Auth, SlowAPI (Rate Limiting), Identity-based RBAC
 - **AI Intelligence:** Google Gemini Pro, Groq (Llama-3 70B)
 
